@@ -13,6 +13,7 @@ Check the [custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-web
 `brew install cmake protobuf rust python git wget`
 
 - Verify you have a Hugginface account and download the stable diffusion model from [here](https://huggingface.co/CompVis/stable-diffusion-v-1-4-original)
+- Once the model has been downloaded, copy and paste it into the `/models/Stable-diffusion/` directory. DO NOT rename the file.
 - Verify you have Conda installed
 - Then, run the below commands in your terminal:
 
