@@ -1,20 +1,18 @@
-import math
 import os
-
 import numpy as np
-from PIL import Image
-
 import torch
 import tqdm
-
-from modules import processing, shared, images, devices, sd_models
-from modules.shared import opts
-import modules.gfpgan_model
-from modules.ui import plaintext_to_html
-import modules.codeformer_model
 import piexif
 import piexif.helper
 import gradio as gr
+
+from PIL import Image
+
+from modules import shared, images, devices, sd_models
+from modules.shared_steps.options import opts
+import modules.gfpgan_model
+import modules.codeformer_model
+from modules.ui import plaintext_to_html
 
 
 cached_images = {}

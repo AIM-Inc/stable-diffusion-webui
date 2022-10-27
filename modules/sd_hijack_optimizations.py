@@ -2,21 +2,21 @@ import math
 import sys
 import traceback
 import importlib
-
 import torch
-from torch import einsum
 
-from ldm.util import default
+import modules.command_options.options as options
+import modules.shared as shared_modules
+import modules.hypernetworks as hypernetworks
+
 from einops import rearrange
+from torch import einsum
+from ldm.util import default
 
-from modules import shared
-from modules.hypernetworks import hypernetwork
 
-
-if shared.cmd_opts.xformers or shared.cmd_opts.force_enable_xformers:
+if options.cmd_opts.xformers or options.cmd_opts.force_enable_xformers:
     try:
         import xformers.ops
-        shared.xformers_available = True
+        shared_modules.xformers_available = True
     except Exception:
         print("Cannot import xformers", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
@@ -29,7 +29,7 @@ def split_cross_attention_forward_v1(self, x, context=None, mask=None):
     q_in = self.to_q(x)
     context = default(context, x)
 
-    context_k, context_v = hypernetwork.apply_hypernetwork(shared.loaded_hypernetwork, context)
+    context_k, context_v = hypernetworks.hypernetwork.apply_hypernetwork(shared_modules.loaded_hypernetwork, context)
     k_in = self.to_k(context_k)
     v_in = self.to_v(context_v)
     del context, context_k, context_v, x
@@ -63,7 +63,7 @@ def split_cross_attention_forward(self, x, context=None, mask=None):
     q_in = self.to_q(x)
     context = default(context, x)
 
-    context_k, context_v = hypernetwork.apply_hypernetwork(shared.loaded_hypernetwork, context)
+    context_k, context_v = hypernetworks.hypernetwork.apply_hypernetwork(shared_modules.loaded_hypernetwork, context)
     k_in = self.to_k(context_k)
     v_in = self.to_v(context_v)
 
@@ -202,7 +202,7 @@ def split_cross_attention_forward_invokeAI(self, x, context=None, mask=None):
     q = self.to_q(x)
     context = default(context, x)
 
-    context_k, context_v = hypernetwork.apply_hypernetwork(shared.loaded_hypernetwork, context)
+    context_k, context_v = hypernetworks.hypernetwork.apply_hypernetwork(loaded_hypernetwork, context)
     k = self.to_k(context_k) * self.scale
     v = self.to_v(context_v)
     del context, context_k, context_v, x
@@ -218,7 +218,7 @@ def xformers_attention_forward(self, x, context=None, mask=None):
     q_in = self.to_q(x)
     context = default(context, x)
 
-    context_k, context_v = hypernetwork.apply_hypernetwork(shared.loaded_hypernetwork, context)
+    context_k, context_v = hypernetworks.hypernetwork.apply_hypernetwork(loaded_hypernetwork, context)
     k_in = self.to_k(context_k)
     v_in = self.to_v(context_v)
 

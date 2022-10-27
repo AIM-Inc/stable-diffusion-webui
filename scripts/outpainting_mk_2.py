@@ -1,15 +1,16 @@
 import math
-
 import numpy as np
 import skimage
-
-import modules.scripts as scripts
 import gradio as gr
+
+import modules.images as images
+import modules.scripts as scripts
+import modules.shared_steps.options as shared_opts
+
 from PIL import Image, ImageDraw
 
-from modules import images, processing, devices
 from modules.processing import Processed, process_images
-from modules.shared import opts, cmd_opts, state
+from modules.shared import state
 
 
 # this function is taken from https://github.com/parlance-zz/g-diffuser-bot
@@ -267,17 +268,17 @@ class Script(scripts.Script):
         all_images = all_processed_images
 
         combined_grid_image = images.image_grid(all_processed_images)
-        unwanted_grid_because_of_img_count = len(all_processed_images) < 2 and opts.grid_only_if_multiple
-        if opts.return_grid and not unwanted_grid_because_of_img_count:
+        unwanted_grid_because_of_img_count = len(all_processed_images) < 2 and shared_opts.opts.grid_only_if_multiple
+        if shared_opts.opts.return_grid and not unwanted_grid_because_of_img_count:
             all_images = [combined_grid_image] + all_processed_images
 
         res = Processed(p, all_images, initial_seed_and_info[0], initial_seed_and_info[1])
 
-        if opts.samples_save:
+        if shared_opts.opts.samples_save:
             for img in all_processed_images:
-                images.save_image(img, p.outpath_samples, "", res.seed, p.prompt, opts.grid_format, info=res.info, p=p)
+                images.save_image(img, p.outpath_samples, "", res.seed, p.prompt, shared_opts.opts.grid_format, info=res.info, p=p)
 
-        if opts.grid_save and not unwanted_grid_because_of_img_count:
-            images.save_image(combined_grid_image, p.outpath_grids, "grid", res.seed, p.prompt, opts.grid_format, info=res.info, short_filename=not opts.grid_extended_filename, grid=True, p=p)
+        if shared_opts.opts.grid_save and not unwanted_grid_because_of_img_count:
+            images.save_image(combined_grid_image, p.outpath_grids, "grid", res.seed, p.prompt, shared_opts.opts.grid_format, info=res.info, short_filename=not shared_opts.opts.grid_extended_filename, grid=True, p=p)
 
         return res

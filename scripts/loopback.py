@@ -1,13 +1,11 @@
-import numpy as np
-from tqdm import trange
-
-import modules.scripts as scripts
 import gradio as gr
 
-from modules import processing, shared, sd_samplers, images
+import modules.shared_steps.options as shared_opts
+import modules.scripts as scripts
+
+from modules import processing, images
 from modules.processing import Processed
-from modules.sd_samplers import samplers
-from modules.shared import opts, cmd_opts, state
+from modules.shared import state
 
 class Script(scripts.Script):
     def title(self):
@@ -54,7 +52,7 @@ class Script(scripts.Script):
                 p.batch_size = 1
                 p.do_not_save_grid = True
 
-                if opts.img2img_color_correction:
+                if shared_opts.opts.img2img_color_correction:
                     p.color_corrections = initial_color_corrections
 
                 state.job = f"Iteration {i + 1}/{loops}, batch {n + 1}/{batch_count}"
@@ -73,13 +71,13 @@ class Script(scripts.Script):
                 history.append(processed.images[0])
 
             grid = images.image_grid(history, rows=1)
-            if opts.grid_save:
-                images.save_image(grid, p.outpath_grids, "grid", initial_seed, p.prompt, opts.grid_format, info=info, short_filename=not opts.grid_extended_filename, grid=True, p=p)
+            if shared_opts.opts.grid_save:
+                images.save_image(grid, p.outpath_grids, "grid", initial_seed, p.prompt, shared_opts.opts.grid_format, info=info, short_filename=not shared_opts.opts.grid_extended_filename, grid=True, p=p)
 
             grids.append(grid)
             all_images += history
 
-        if opts.return_grid:
+        if shared_opts.opts.return_grid:
             all_images = grids + all_images
 
         processed = Processed(p, all_images, initial_seed, initial_info)

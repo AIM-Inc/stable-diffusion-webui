@@ -1,15 +1,14 @@
 import math
-import os
-import sys
-import traceback
 import torch
-import numpy as np
-from torch import einsum
-from torch.nn.functional import silu
 
+import modules.command_options.options as options
+import modules.shared_steps.options as shared_opts
+import modules.prompt_parser as prompt_parser
+import modules.sd_hijack_optimizations as sd_hijack_optimizations
+import modules.shared as shared
 import modules.textual_inversion.textual_inversion
-from modules import prompt_parser, devices, sd_hijack_optimizations, shared
-from modules.shared import opts, device, cmd_opts
+
+from torch.nn.functional import silu
 from modules.sd_hijack_optimizations import invokeAI_mps_available
 
 import ldm.modules.attention
@@ -25,14 +24,14 @@ def apply_optimizations():
 
     ldm.modules.diffusionmodules.model.nonlinearity = silu
 
-    if cmd_opts.force_enable_xformers or (cmd_opts.xformers and shared.xformers_available and torch.version.cuda and (6, 0) <= torch.cuda.get_device_capability(shared.device) <= (9, 0)):
+    if options.cmd_opts.force_enable_xformers or (options.cmd_opts.xformers and shared.xformers_available and torch.version.cuda and (6, 0) <= torch.cuda.get_device_capability(shared.device) <= (9, 0)):
         print("Applying xformers cross attention optimization.")
         ldm.modules.attention.CrossAttention.forward = sd_hijack_optimizations.xformers_attention_forward
         ldm.modules.diffusionmodules.model.AttnBlock.forward = sd_hijack_optimizations.xformers_attnblock_forward
-    elif cmd_opts.opt_split_attention_v1:
+    elif options.cmd_opts.opt_split_attention_v1:
         print("Applying v1 cross attention optimization.")
         ldm.modules.attention.CrossAttention.forward = sd_hijack_optimizations.split_cross_attention_forward_v1
-    elif not cmd_opts.disable_opt_split_attention and (cmd_opts.opt_split_attention_invokeai or not torch.cuda.is_available()):
+    elif not options.cmd_opts.disable_opt_split_attention and (options.cmd_opts.opt_split_attention_invokeai or not torch.cuda.is_available()):
         if not invokeAI_mps_available and shared.device.type == 'mps':
             print("The InvokeAI cross attention optimization for MPS requires the psutil package which is not installed.")
             print("Applying v1 cross attention optimization.")
@@ -40,7 +39,7 @@ def apply_optimizations():
         else:
             print("Applying cross attention optimization (InvokeAI).")
             ldm.modules.attention.CrossAttention.forward = sd_hijack_optimizations.split_cross_attention_forward_invokeAI
-    elif not cmd_opts.disable_opt_split_attention and (cmd_opts.opt_split_attention or torch.cuda.is_available()):
+    elif not options.cmd_opts.disable_opt_split_attention and (options.cmd_opts.opt_split_attention or torch.cuda.is_available()):
         print("Applying cross attention optimization (Doggettx).")
         ldm.modules.attention.CrossAttention.forward = sd_hijack_optimizations.split_cross_attention_forward
         ldm.modules.diffusionmodules.model.AttnBlock.forward = sd_hijack_optimizations.cross_attention_attnblock_forward
@@ -65,7 +64,7 @@ class StableDiffusionModelHijack:
     circular_enabled = False
     clip = None
 
-    embedding_db = modules.textual_inversion.textual_inversion.EmbeddingDatabase(cmd_opts.embeddings_dir)
+    embedding_db = modules.textual_inversion.textual_inversion.EmbeddingDatabase(options.cmd_opts.embeddings_dir)
 
     def hijack(self, m):
         model_embeddings = m.cond_stage_model.transformer.text_model.embeddings
@@ -140,7 +139,7 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
     def tokenize_line(self, line, used_custom_terms, hijack_comments):
         id_end = self.wrapped.tokenizer.eos_token_id
 
-        if opts.enable_emphasis:
+        if shared_opts.opts.enable_emphasis:
             parsed = prompt_parser.parse_prompt_attention(line)
         else:
             parsed = [[line, 1.0]]
@@ -161,7 +160,7 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
 
                 if token == self.comma_token:
                     last_comma = len(remade_tokens)
-                elif opts.comma_padding_backtrack != 0 and max(len(remade_tokens), 1) % 75 == 0 and last_comma != -1 and len(remade_tokens) - last_comma <= opts.comma_padding_backtrack:
+                elif shared_opts.opts.comma_padding_backtrack != 0 and max(len(remade_tokens), 1) % 75 == 0 and last_comma != -1 and len(remade_tokens) - last_comma <= shared_opts.opts.comma_padding_backtrack:
                     last_comma += 1
                     reloc_tokens = remade_tokens[last_comma:]
                     reloc_mults = multipliers[last_comma:]
@@ -255,7 +254,7 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
 
                     embedding, embedding_length_in_tokens = self.hijack.embedding_db.find_embedding_at_position(tokens, i)
 
-                    mult_change = self.token_mults.get(token) if opts.enable_emphasis else None
+                    mult_change = self.token_mults.get(token) if shared_opts.opts.enable_emphasis else None
                     if mult_change is not None:
                         mult *= mult_change
                         i += 1
@@ -292,7 +291,7 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
         return batch_multipliers, remade_batch_tokens, used_custom_terms, hijack_comments, hijack_fixes, token_count
 
     def forward(self, text):
-        use_old = opts.use_old_emphasis_implementation
+        use_old = shared_opts.opts.use_old_emphasis_implementation
         if use_old:
             batch_multipliers, remade_batch_tokens, used_custom_terms, hijack_comments, hijack_fixes, token_count = self.process_text_old(text)
         else:
@@ -341,22 +340,22 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
         return z
 
     def process_tokens(self, remade_batch_tokens, batch_multipliers):
-        if not opts.use_old_emphasis_implementation:
+        if not shared_opts.opts.use_old_emphasis_implementation:
             remade_batch_tokens = [[self.wrapped.tokenizer.bos_token_id] + x[:75] + [self.wrapped.tokenizer.eos_token_id] for x in remade_batch_tokens]
             batch_multipliers = [[1.0] + x[:75] + [1.0] for x in batch_multipliers]
 
-        tokens = torch.asarray(remade_batch_tokens).to(device)
-        outputs = self.wrapped.transformer(input_ids=tokens, output_hidden_states=-opts.CLIP_stop_at_last_layers)
+        tokens = torch.asarray(remade_batch_tokens).to(shared.device)
+        outputs = self.wrapped.transformer(input_ids=tokens, output_hidden_states=-shared_opts.opts.CLIP_stop_at_last_layers)
 
-        if opts.CLIP_stop_at_last_layers > 1:
-            z = outputs.hidden_states[-opts.CLIP_stop_at_last_layers]
+        if shared_opts.opts.CLIP_stop_at_last_layers > 1:
+            z = outputs.hidden_states[-shared.opts.CLIP_stop_at_last_layers]
             z = self.wrapped.transformer.text_model.final_layer_norm(z)
         else:
             z = outputs.last_hidden_state
 
         # restoring original mean is likely not correct, but it seems to work well to prevent artifacts that happen otherwise
         batch_multipliers_of_same_length = [x + [1.0] * (75 - len(x)) for x in batch_multipliers]
-        batch_multipliers = torch.asarray(batch_multipliers_of_same_length).to(device)
+        batch_multipliers = torch.asarray(batch_multipliers_of_same_length).to(shared.device)
         original_mean = z.mean()
         z *= batch_multipliers.reshape(batch_multipliers.shape + (1,)).expand(z.shape)
         new_mean = z.mean()

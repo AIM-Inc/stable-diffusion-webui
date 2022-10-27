@@ -1,15 +1,18 @@
 import os
-from PIL import Image, ImageOps
 import math
-import platform
-import sys
 import tqdm
-import time
 
-from modules import shared, images
+import modules.shared as shared
+import modules.images as images
+
+from PIL import Image, ImageOps
+
+from modules.command_options.options import cmd_opts
+from modules.shared_steps.options import opts
 from modules.paths import models_path
-from modules.shared import opts, cmd_opts
 from modules.textual_inversion import autocrop
+
+
 if cmd_opts.deepdanbooru:
     import modules.deepbooru as deepbooru
 

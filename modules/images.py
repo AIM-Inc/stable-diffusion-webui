@@ -7,28 +7,29 @@ import string
 import sys
 import traceback
 
-from collections import namedtuple
-
 import numpy as np
 import piexif
 import piexif.helper
 import pytz
+
+import modules.script_callbacks as script_callbacks
+import modules.sd_samplers as sd_samplers
+import modules.shared as shared_modules
+
+from collections import namedtuple
 from fonts.ttf import Roboto
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
-
-from modules import script_callbacks, sd_samplers, shared
-from modules.shared import opts
 
 LANCZOS = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
 
 
 def image_grid(imgs, batch_size=1, rows=None):
     if rows is None:
-        if opts.n_rows > 0:
-            rows = opts.n_rows
-        elif opts.n_rows == 0:
+        if shared_modules.opts.n_rows > 0:
+            rows = shared_modules.opts.n_rows
+        elif shared_modules.opts.n_rows == 0:
             rows = batch_size
-        elif opts.grid_prevent_empty_spots:
+        elif shared_modules.opts.grid_prevent_empty_spots:
             rows = math.floor(math.sqrt(len(imgs)))
             while len(imgs) % rows != 0:
                 rows -= 1
@@ -183,7 +184,7 @@ def draw_grid_annotations(im, width, height, hor_texts, ver_texts):
     line_spacing = fontsize // 2
 
     try:
-        fnt = ImageFont.truetype(opts.font or Roboto, fontsize)
+        fnt = ImageFont.truetype(shared_modules.opts.font or Roboto, fontsize)
     except Exception:
         fnt = ImageFont.truetype(Roboto, fontsize)
 
@@ -292,11 +293,11 @@ def resize_image(resize_mode, im, width, height):
 
         if scale > 1.0:
             upscalers = [
-                x for x in shared.sd_upscalers if x.name == opts.upscaler_for_img2img
+                x for x in shared_modules.sd_upscalers if x.name == shared_modules.opts.upscaler_for_img2img
             ]
             assert (
                 len(upscalers) > 0
-            ), f"could not find upscaler named {opts.upscaler_for_img2img}"
+            ), f"could not find upscaler named {shared_modules.opts.upscaler_for_img2img}"
 
             upscaler = upscalers[0]
             im = upscaler.scaler.upscale(im, scale, upscaler.data_path)
@@ -397,14 +398,14 @@ class FilenameGenerator:
             sd_samplers.samplers[self.p.sampler_index].name, replace_spaces=False
         ),
         "model_hash": lambda self: getattr(
-            self.p, "sd_model_hash", shared.sd_model.sd_model_hash
+            self.p, "sd_model_hash", shared_modules.sd_model.sd_model_hash
         ),
         "date": lambda self: datetime.datetime.now().strftime("%Y-%m-%d"),
         "datetime": lambda self, *args: self.datetime(
             *args
         ),  # accepts formats: [datetime], [datetime<Format>], [datetime<Format><Time Zone>]
         "job_timestamp": lambda self: getattr(
-            self.p, "job_timestamp", shared.state.job_timestamp
+            self.p, "job_timestamp", shared_modules.state.job_timestamp
         ),
         "prompt": lambda self: sanitize_filename_part(self.prompt),
         "prompt_no_styles": lambda self: self.prompt_no_style(),
@@ -425,7 +426,7 @@ class FilenameGenerator:
             return None
 
         prompt_no_style = self.prompt
-        for style in shared.prompt_styles.get_style_prompts(self.p.styles):
+        for style in shared_modules.prompt_styles.get_style_prompts(self.p.styles):
             if len(style) > 0:
                 for part in style.split("{prompt}"):
                     prompt_no_style = (
@@ -446,7 +447,7 @@ class FilenameGenerator:
         if len(words) == 0:
             words = ["empty"]
         return sanitize_filename_part(
-            " ".join(words[0 : opts.directories_max_prompt_words]), replace_spaces=False
+            " ".join(words[0 : shared_modules.opts.directories_max_prompt_words]), replace_spaces=False
         )
 
     def datetime(self, *args):
@@ -582,13 +583,13 @@ def save_image(
     namegen = FilenameGenerator(p, seed, prompt)
 
     if save_to_dirs is None:
-        save_to_dirs = (grid and opts.grid_save_to_dirs) or (
-            not grid and opts.save_to_dirs and not no_prompt
+        save_to_dirs = (grid and shared_modules.opts.grid_save_to_dirs) or (
+            not grid and shared_modules.opts.save_to_dirs and not no_prompt
         )
 
     if save_to_dirs:
         dirname = (
-            namegen.apply(opts.directories_filename_pattern or "[prompt_words]")
+            namegen.apply(shared_modules.opts.directories_filename_pattern or "[prompt_words]")
             .lstrip(" ")
             .rstrip("\\ /")
         )
@@ -599,12 +600,12 @@ def save_image(
     if forced_filename is None:
         if short_filename or seed is None:
             file_decoration = ""
-        elif opts.save_to_dirs:
-            file_decoration = opts.samples_filename_pattern or "[seed]"
+        elif shared_modules.opts.save_to_dirs:
+            file_decoration = shared_modules.opts.samples_filename_pattern or "[seed]"
         else:
-            file_decoration = opts.samples_filename_pattern or "[seed]-[prompt_spaces]"
+            file_decoration = shared_modules.opts.samples_filename_pattern or "[seed]-[prompt_spaces]"
 
-        add_number = opts.save_images_add_number or file_decoration == ""
+        add_number = shared_modules.opts.save_images_add_number or file_decoration == ""
 
         if file_decoration != "" and add_number:
             file_decoration = "-" + file_decoration
@@ -656,19 +657,19 @@ def save_image(
         for k, v in params.pnginfo.items():
             pnginfo_data.add_text(k, str(v))
 
-        image.save(fullfn, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
+        image.save(fullfn, quality=shared_modules.opts.jpeg_quality, pnginfo=pnginfo_data)
 
     elif extension.lower() in (".jpg", ".jpeg", ".webp"):
-        image.save(fullfn, quality=opts.jpeg_quality)
+        image.save(fullfn, quality=shared_modules.opts.jpeg_quality)
 
-        if opts.enable_pnginfo and info is not None:
+        if shared_modules.opts.enable_pnginfo and info is not None:
             piexif.insert(exif_bytes(), fullfn)
     else:
-        image.save(fullfn, quality=opts.jpeg_quality)
+        image.save(fullfn, quality=shared_modules.opts.jpeg_quality)
 
     target_side_length = 4000
     oversize = image.width > target_side_length or image.height > target_side_length
-    if opts.export_for_4chan and (
+    if shared_modules.opts.export_for_4chan and (
         oversize or os.stat(fullfn).st_size > 4 * 1024 * 1024
     ):
         ratio = image.width / image.height
@@ -684,11 +685,11 @@ def save_image(
                 LANCZOS,
             )
 
-        image.save(fullfn_without_extension + ".jpg", quality=opts.jpeg_quality)
-        if opts.enable_pnginfo and info is not None:
+        image.save(fullfn_without_extension + ".jpg", quality=shared_modules.opts.jpeg_quality)
+        if shared_modules.opts.enable_pnginfo and info is not None:
             piexif.insert(exif_bytes(), fullfn_without_extension + ".jpg")
 
-    if opts.save_txt and info is not None:
+    if shared_modules.opts.save_txt and info is not None:
         txt_fullfn = f"{fullfn_without_extension}.txt"
         with open(txt_fullfn, "w", encoding="utf8") as file:
             file.write(info + "\n")

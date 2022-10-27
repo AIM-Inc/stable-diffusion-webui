@@ -1,4 +1,5 @@
-from modules import shared
+# from modules import shared
+import modules.shared as shared_modules
 
 
 class FaceRestoration:
@@ -10,7 +11,7 @@ class FaceRestoration:
 
 
 def restore_faces(np_image):
-    face_restorers = [x for x in shared.face_restorers if x.name() == shared.opts.face_restoration_model or shared.opts.face_restoration_model is None]
+    face_restorers = [x for x in shared_modules.face_restorers if x.name() == shared_modules.opts.face_restoration_model or shared_modules.opts.face_restoration_model is None]
     if len(face_restorers) == 0:
         return np_image
 

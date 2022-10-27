@@ -1,4 +1,3 @@
-import csv
 import datetime
 import glob
 import html
@@ -7,12 +6,21 @@ import sys
 import traceback
 import inspect
 
+import modules.command_options.options as options
+import modules.devices as devices
+import modules.processing as processing
+import modules.sd_models as sd_models
+import modules.shared as shared
 import modules.textual_inversion.dataset
+import modules.shared_steps.options as shared_opts
+import modules.shared_steps.templates as templates
+
 import torch
 import tqdm
+
 from einops import rearrange, repeat
 from ldm.util import default
-from modules import devices, processing, sd_models, shared
+
 from modules.textual_inversion import textual_inversion
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
 from torch import einsum
@@ -119,7 +127,7 @@ class HypernetworkModule(torch.nn.Module):
 
 
 def apply_strength(value=None):
-    HypernetworkModule.multiplier = value if value is not None else shared.opts.sd_hypernetwork_strength
+    HypernetworkModule.multiplier = value if value is not None else shared_opts.opts.sd_hypernetwork_strength
 
 
 class Hypernetwork:
@@ -213,7 +221,7 @@ def list_hypernetworks(path):
 
 
 def load_hypernetwork(filename):
-    path = shared.hypernetworks.get(filename, None)
+    path = templates.hypernetworks.get(filename, None)
     if path is not None:
         print(f"Loading hypernetwork {filename}")
         try:
@@ -234,7 +242,7 @@ def find_closest_hypernetwork_name(search: str):
     if not search:
         return None
     search = search.lower()
-    applicable = [name for name in shared.hypernetworks if search in name.lower()]
+    applicable = [name for name in templates.hypernetworks if search in name.lower()]
     if not applicable:
         return None
     applicable = sorted(applicable, key=lambda name: len(name))
@@ -333,17 +341,17 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
     assert hypernetwork_name, 'hypernetwork not selected'
 
-    path = shared.hypernetworks.get(hypernetwork_name, None)
+    path = templates.hypernetworks.get(hypernetwork_name, None)
     shared.loaded_hypernetwork = Hypernetwork()
     shared.loaded_hypernetwork.load(path)
 
     shared.state.textinfo = "Initializing hypernetwork training..."
     shared.state.job_count = steps
 
-    filename = os.path.join(shared.cmd_opts.hypernetwork_dir, f'{hypernetwork_name}.pt')
+    filename = os.path.join(options.cmd_opts.hypernetwork_dir, f'{hypernetwork_name}.pt')
 
     log_directory = os.path.join(log_directory, datetime.datetime.now().strftime("%Y-%m-%d"), hypernetwork_name)
-    unload = shared.opts.unload_models_when_training
+    unload = shared_opts.opts.unload_models_when_training
 
     if save_hypernetwork_every > 0:
         hypernetwork_dir = os.path.join(log_directory, "hypernetworks")
@@ -359,7 +367,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
     shared.state.textinfo = f"Preparing dataset from {html.escape(data_root)}..."
     with torch.autocast("cuda"):
-        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared.opts.training_image_repeats_per_epoch, placeholder_token=hypernetwork_name, model=shared.sd_model, device=devices.device, template_file=template_file, include_cond=True, batch_size=batch_size)
+        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared_opts.opts.training_image_repeats_per_epoch, placeholder_token=hypernetwork_name, model=shared.sd_model, device=devices.device, template_file=template_file, include_cond=True, batch_size=batch_size)
     if unload:
         shared.sd_model.cond_stage_model.to(devices.cpu)
         shared.sd_model.first_stage_model.to(devices.cpu)
@@ -487,7 +495,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
             if image is not None:
                 shared.state.current_image = image
-                last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
+                last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared_opts.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
                 last_saved_image += f", prompt: {preview_text}"
 
         shared.state.job_no = hypernetwork.step
@@ -509,7 +517,7 @@ Last saved image: {html.escape(last_saved_image)}<br/>
     hypernetwork.sd_checkpoint_name = checkpoint.model_name
     # Before saving for the last time, change name back to the base name (as opposed to the save_hypernetwork_every step-suffixed naming convention).
     hypernetwork.name = hypernetwork_name
-    filename = os.path.join(shared.cmd_opts.hypernetwork_dir, f'{hypernetwork.name}.pt')
+    filename = os.path.join(options.cmd_opts.hypernetwork_dir, f'{hypernetwork.name}.pt')
     hypernetwork.save(filename)
 
     return hypernetwork, filename

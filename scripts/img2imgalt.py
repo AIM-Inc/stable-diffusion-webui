@@ -1,21 +1,15 @@
-from collections import namedtuple
-
 import numpy as np
-from tqdm import trange
-
-import modules.scripts as scripts
-import gradio as gr
-
-from modules import processing, shared, sd_samplers, prompt_parser
-from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state
-
 import torch
 import k_diffusion as K
+import gradio as gr
 
-from PIL import Image
-from torch import autocast
-from einops import rearrange, repeat
+import modules.processing as processing
+import modules.scripts as scripts
+import modules.sd_samplers as sd_samplers
+import modules.shared as shared
+
+from collections import namedtuple
+from tqdm import trange
 
 
 def find_noise_for_image(p, cond, uncond, cfg_scale, steps):

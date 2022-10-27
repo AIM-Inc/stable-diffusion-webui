@@ -1,15 +1,13 @@
 import math
-from collections import namedtuple
-from copy import copy
-import random
-
-import modules.scripts as scripts
 import gradio as gr
 
-from modules import images
-from modules.processing import process_images, Processed
-from modules.shared import opts, cmd_opts, state
+import modules.shared_steps.options as shared_opts
 import modules.sd_samplers
+import modules.scripts as scripts
+
+from modules import images
+from modules.processing import process_images
+from modules.shared import state
 
 
 def draw_xy_grid(xs, ys, x_label, y_label, cell):
@@ -81,7 +79,7 @@ class Script(scripts.Script):
         grid = images.draw_prompt_matrix(grid, p.width, p.height, prompt_matrix_parts)
         processed.images.insert(0, grid)
 
-        if opts.grid_save:
+        if shared_opts.opts.grid_save:
             images.save_image(processed.images[0], p.outpath_grids, "prompt_matrix", prompt=original_prompt, seed=processed.seed, grid=True, p=p)
 
         return processed

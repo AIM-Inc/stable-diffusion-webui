@@ -1,6 +1,5 @@
 # this code is adapted from the script contributed by anon from /h/
 
-import io
 import pickle
 import collections
 import sys
@@ -90,10 +89,10 @@ def check_pt(filename):
 
 
 def load(filename, *args, **kwargs):
-    from modules import shared
+    from modules.command_options.options import cmd_opts
 
     try:
-        if not shared.cmd_opts.disable_safe_unpickle:
+        if not cmd_opts.disable_safe_unpickle:
             check_pt(filename)
 
     except pickle.UnpicklingError:

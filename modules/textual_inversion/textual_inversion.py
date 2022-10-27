@@ -8,12 +8,19 @@ import html
 import datetime
 import csv
 
+import modules.command_options.options as options
+import modules.devices as devices
+import modules.images as images
+import modules.processing as processing
+import modules.sd_hijack as sd_hijack
+import modules.sd_models as sd_models
+import modules.shared as shared
+import modules.shared_steps.options as shared_opts
+import modules.textual_inversion.dataset
+
 from PIL import Image, PngImagePlugin
 
-from modules import shared, devices, sd_hijack, processing, sd_models, images
-import modules.textual_inversion.dataset
 from modules.textual_inversion.learn_schedule import LearnRateScheduler
-
 from modules.textual_inversion.image_embedding import (embedding_to_b64, embedding_from_b64,
                                                        insert_image_data_embed, extract_image_data_embed,
                                                        caption_image_overlay)
@@ -169,7 +176,7 @@ def create_embedding(name, num_vectors_per_token, overwrite_old, init_text='*'):
 
     # Remove illegal characters from name.
     name = "".join( x for x in name if (x.isalnum() or x in "._- "))
-    fn = os.path.join(shared.cmd_opts.embeddings_dir, f"{name}.pt")
+    fn = os.path.join(options.cmd_opts.embeddings_dir, f"{name}.pt")
     if not overwrite_old:
         assert not os.path.exists(fn), f"file {fn} already exists"
 
@@ -181,10 +188,10 @@ def create_embedding(name, num_vectors_per_token, overwrite_old, init_text='*'):
 
 
 def write_loss(log_directory, filename, step, epoch_len, values):
-    if shared.opts.training_write_csv_every == 0:
+    if shared_opts.opts.training_write_csv_every == 0:
         return
 
-    if step % shared.opts.training_write_csv_every != 0:
+    if step % shared_opts.opts.training_write_csv_every != 0:
         return
 
     write_csv_header = False if os.path.exists(os.path.join(log_directory, filename)) else True
@@ -212,7 +219,7 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
     shared.state.textinfo = "Initializing textual inversion training..."
     shared.state.job_count = steps
 
-    filename = os.path.join(shared.cmd_opts.embeddings_dir, f'{embedding_name}.pt')
+    filename = os.path.join(options.cmd_opts.embeddings_dir, f'{embedding_name}.pt')
 
     log_directory = os.path.join(log_directory, datetime.datetime.now().strftime("%Y-%m-%d"), embedding_name)
 
@@ -238,7 +245,7 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
 
     shared.state.textinfo = f"Preparing dataset from {html.escape(data_root)}..."
     with torch.autocast("cuda"):
-        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared.opts.training_image_repeats_per_epoch, placeholder_token=embedding_name, model=shared.sd_model, device=devices.device, template_file=template_file, batch_size=batch_size)
+        ds = modules.textual_inversion.dataset.PersonalizedBase(data_root=data_root, width=training_width, height=training_height, repeats=shared_opts.opts.training_image_repeats_per_epoch, placeholder_token=embedding_name, model=shared.sd_model, device=devices.device, template_file=template_file, batch_size=batch_size)
 
     hijack = sd_hijack.model_hijack
 
@@ -358,7 +365,7 @@ def train_embedding(embedding_name, learn_rate, batch_size, data_root, log_direc
                 captioned_image.save(last_saved_image_chunks, "PNG", pnginfo=info)
                 embedding_yet_to_be_embedded = False
 
-            last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
+            last_saved_image, last_text_info = images.save_image(image, images_dir, "", p.seed, p.prompt, shared_opts.opts.samples_format, processed.infotexts[0], p=p, forced_filename=forced_filename, save_to_dirs=False)
             last_saved_image += f", prompt: {preview_text}"
 
         shared.state.job_no = embedding.step
@@ -380,7 +387,7 @@ Last saved image: {html.escape(last_saved_image)}<br/>
     embedding.cached_checksum = None
     # Before saving for the last time, change name back to base name (as opposed to the save_embedding_every step-suffixed naming convention).
     embedding.name = embedding_name
-    filename = os.path.join(shared.cmd_opts.embeddings_dir, f'{embedding.name}.pt')
+    filename = os.path.join(options.cmd_opts.embeddings_dir, f'{embedding.name}.pt')
     embedding.save(filename)
 
     return embedding, filename

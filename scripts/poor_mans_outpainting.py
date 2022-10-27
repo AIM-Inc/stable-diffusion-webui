@@ -1,12 +1,15 @@
 import math
-
-import modules.scripts as scripts
 import gradio as gr
+
+import modules.devices as devices
+import modules.images as images
+import modules.shared_steps.options as shared_opts
+import modules.scripts as scripts
+
 from PIL import Image, ImageDraw
 
-from modules import images, processing, devices
 from modules.processing import Processed, process_images
-from modules.shared import opts, cmd_opts, state
+from modules.shared import state
 
 
 
@@ -138,8 +141,8 @@ class Script(scripts.Script):
 
         combined_image = images.combine_grid(grid)
 
-        if opts.samples_save:
-            images.save_image(combined_image, p.outpath_samples, "", initial_seed, p.prompt, opts.grid_format, info=initial_info, p=p)
+        if shared_opts.opts.samples_save:
+            images.save_image(combined_image, p.outpath_samples, "", initial_seed, p.prompt, shared_opts.opts.grid_format, info=initial_info, p=p)
 
         processed = Processed(p, [combined_image], initial_seed, initial_info)
 

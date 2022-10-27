@@ -3,12 +3,14 @@ import sys
 import traceback
 
 import numpy as np
+
 from PIL import Image
 from basicsr.utils.download_util import load_file_from_url
 from realesrgan import RealESRGANer
 
+from modules.command_options.options import cmd_opts
+from modules.shared_steps.options import opts
 from modules.upscaler import Upscaler, UpscalerData
-from modules.shared import cmd_opts, opts
 
 
 class UpscalerRealESRGAN(Upscaler):
@@ -17,9 +19,6 @@ class UpscalerRealESRGAN(Upscaler):
         self.user_path = path
         super().__init__()
         try:
-            from basicsr.archs.rrdbnet_arch import RRDBNet
-            from realesrgan import RealESRGANer
-            from realesrgan.archs.srvgg_arch import SRVGGNetCompact
             self.enable = True
             self.scalers = []
             scalers = self.load_models(path)

@@ -21,8 +21,14 @@ import modules.sd_models
 import modules.shared as shared
 import modules.txt2img
 import modules.ui
-from modules import devices, modelloader, sd_samplers, upscaler
-from modules.shared import cmd_opts
+import modules.devices as devices
+import modules.modelloader as modelloader
+import modules.sd_samplers as sd_samplers
+import modules.upscaler as upscaler
+import modules.shared_steps.options as shared_opts
+
+from modules.command_options.options import cmd_opts
+from modules.shared_steps.templates import face_restorers
 
 queue_lock = threading.Lock()
 
@@ -75,28 +81,28 @@ def initialize():
     modules.sd_models.setup_model()
     codeformer.setup_model(cmd_opts.codeformer_models_path)
     gfpgan.setup_model(cmd_opts.gfpgan_models_path)
-    shared.face_restorers.append(modules.face_restoration.FaceRestoration())
+    face_restorers.append(modules.face_restoration.FaceRestoration())
     modelloader.load_upscalers()
 
     modules.scripts.load_scripts()
 
     modules.sd_models.load_model()
     # trunk-ignore(git-diff-check/error)
-    shared.opts.onchange(
+    shared_opts.opts.onchange(
         "sd_model_checkpoint",
         wrap_queued_call(
             lambda: modules.sd_models.reload_model_weights(shared.sd_model)
         ),
     )
-    shared.opts.onchange(
+    shared_opts.opts.onchange(
         "sd_hypernetwork",
         wrap_queued_call(
             lambda: modules.hypernetworks.hypernetwork.load_hypernetwork(
-                shared.opts.sd_hypernetwork
+                shared_opts.opts.sd_hypernetwork
             )
         ),
     )
-    shared.opts.onchange(
+    shared_opts.opts.onchange(
         "sd_hypernetwork_strength", modules.hypernetworks.hypernetwork.apply_strength
     )
 
@@ -143,7 +149,9 @@ def webui():
     initialize()
 
     while 1:
-        demo = modules.ui.create_ui(wrap_gradio_gpu_call=wrap_gradio_gpu_call)
+        (samplers, samplers_for_img2img) = sd_samplers.set_samplers()
+
+        demo = modules.ui.create_ui(wrap_gradio_gpu_call, samplers, samplers_for_img2img)
 
         app, local_url, share_url = demo.launch(
             share=cmd_opts.share,
@@ -168,8 +176,6 @@ def webui():
             create_api(app)
 
         wait_on_server(demo)
-
-        sd_samplers.set_samplers()
 
         print("Reloading Custom Scripts")
         modules.scripts.reload_scripts()

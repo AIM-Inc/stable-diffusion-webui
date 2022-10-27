@@ -2,10 +2,13 @@ import glob
 import os
 import shutil
 import importlib
-from urllib.parse import urlparse
+
+import modules.shared as shared
 
 from basicsr.utils.download_util import load_file_from_url
-from modules import shared
+from urllib.parse import urlparse
+
+from modules.command_options.options import cmd_opts
 from modules.upscaler import Upscaler
 from modules.paths import script_path, models_path
 
@@ -120,7 +123,7 @@ def move_files(src_path: str, dest_path: str, ext_filter: str = None):
 
 
 def load_upscalers():
-    sd = shared.script_path
+    sd = script_path
     # We can only do this 'magic' method to dynamically load upscalers if they are referenced,
     # so we'll try to import any _model.py files before looking in __subclasses__
     modules_dir = os.path.join(sd, "modules")
@@ -133,7 +136,7 @@ def load_upscalers():
             except:
                 pass
     datas = []
-    c_o = vars(shared.cmd_opts)
+    c_o = vars(cmd_opts)
     for cls in Upscaler.__subclasses__():
         name = cls.__name__
         module_name = cls.__module__

@@ -5,8 +5,12 @@ import traceback
 import facexlib
 import gfpgan
 
+import modules.devices as devices
 import modules.face_restoration
-from modules import shared, devices, modelloader
+import modules.modelloader as modelloader
+
+from modules.shared_steps.options import opts
+from modules.shared_steps.templates import face_restorers
 from modules.paths import models_path
 
 model_dir = "GFPGAN"
@@ -61,7 +65,7 @@ def gfpgan_fix_faces(np_image):
 
     model.face_helper.clean_all()
 
-    if shared.opts.face_restoration_unload:
+    if opts.face_restoration_unload:
         send_model_to(model, devices.cpu)
 
     return np_image
@@ -77,7 +81,7 @@ def setup_model(dirname):
 
     try:
         from gfpgan import GFPGANer
-        from facexlib import detection, parsing
+
         global user_path
         global have_gfpgan
         global gfpgan_constructor
@@ -109,7 +113,7 @@ def setup_model(dirname):
             def restore(self, np_image):
                 return gfpgan_fix_faces(np_image)
 
-        shared.face_restorers.append(FaceRestorerGFPGAN())
+        face_restorers.append(FaceRestorerGFPGAN())
     except Exception:
         print("Error setting up GFPGAN:", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)

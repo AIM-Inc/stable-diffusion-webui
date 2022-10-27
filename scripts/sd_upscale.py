@@ -1,12 +1,17 @@
 import math
-
-import modules.scripts as scripts
 import gradio as gr
+
+import modules.devices as devices
+import modules.images as images
+import modules.processing as processing
+import modules.shared_steps.options as shared_opts
+import modules.shared_steps.templates as templates
+import modules.scripts as scripts
+
 from PIL import Image
 
-from modules import processing, shared, sd_samplers, images, devices
 from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state
+from modules.shared import state
 
 
 class Script(scripts.Script):
@@ -19,13 +24,14 @@ class Script(scripts.Script):
     def ui(self, is_img2img):
         info = gr.HTML("<p style=\"margin-bottom:0.75em\">Will upscale the image to twice the dimensions; use width and height sliders to set tile size</p>")
         overlap = gr.Slider(minimum=0, maximum=256, step=16, label='Tile overlap', value=64, visible=False)
-        upscaler_index = gr.Radio(label='Upscaler', choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index", visible=False)
+        upscaler_value = templates.sd_upscalers[0].name if len(templates.sd_upscalers) > 0 else None
+        upscaler_index = gr.Radio(label='Upscaler', choices=[x.name for x in templates.sd_upscalers], value=upscaler_value, type="index", visible=False)
 
         return [info, overlap, upscaler_index]
 
     def run(self, p, _, overlap, upscaler_index):
         processing.fix_seed(p)
-        upscaler = shared.sd_upscalers[upscaler_index]
+        upscaler = templates.sd_upscalers[upscaler_index]
 
         p.extra_generation_params["SD upscale overlap"] = overlap
         p.extra_generation_params["SD upscale upscaler"] = upscaler.name
@@ -89,8 +95,8 @@ class Script(scripts.Script):
             combined_image = images.combine_grid(grid)
             result_images.append(combined_image)
 
-            if opts.samples_save:
-                images.save_image(combined_image, p.outpath_samples, "", start_seed, p.prompt, opts.samples_format, info=initial_info, p=p)
+            if shared_opts.opts.samples_save:
+                images.save_image(combined_image, p.outpath_samples, "", start_seed, p.prompt, shared_opts.opts.samples_format, info=initial_info, p=p)
 
         processed = Processed(p, result_images, seed, initial_info)
 

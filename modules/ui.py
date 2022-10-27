@@ -2,7 +2,6 @@ import base64
 import html
 import io
 import json
-import math
 import mimetypes
 import os
 import platform
@@ -12,24 +11,23 @@ import sys
 import tempfile
 import time
 import traceback
-from functools import partial, reduce
-
 import gradio as gr
 import gradio.routes
 import gradio.utils
-import numpy as np
-import piexif
-import torch
+
+import modules.localization as localization
+import modules.script_callbacks as script_callbacks
+import modules.sd_hijack as sd_hijack
+import modules.sd_models as sd_models
+
+from functools import partial, reduce
 from PIL import Image, PngImagePlugin
 
-import gradio as gr
-import gradio.utils
-import gradio.routes
-
-from modules import sd_hijack, sd_models, localization, script_callbacks
+from modules.command_options.options import cmd_opts
 from modules.paths import script_path
-
-from modules.shared import opts, cmd_opts, restricted_opts
+from modules.shared_steps.options import opts
+from modules.shared_steps.templates import artist_db, face_restorers, hypernetworks, reload_hypernetworks, hide_dirs
+from modules.shared import restricted_opts
 
 if cmd_opts.deepdanbooru:
     from modules.deepbooru import get_deepbooru_tags
@@ -46,7 +44,6 @@ import modules.textual_inversion.ui
 from modules import prompt_parser
 from modules.images import save_image
 from modules.sd_hijack import model_hijack
-from modules.sd_samplers import samplers, samplers_for_img2img
 import modules.textual_inversion.ui
 import modules.hypernetworks.ui
 
@@ -349,8 +346,8 @@ def check_progress_call_initial(id_part):
 
 
 def roll_artist(prompt):
-    allowed_cats = set([x for x in shared.artist_db.categories() if len(opts.random_artist_categories)==0 or x in opts.random_artist_categories])
-    artist = random.choice([x for x in shared.artist_db.artists if x.category in allowed_cats])
+    allowed_cats = set([x for x in artist_db.categories() if len(opts.random_artist_categories)==0 or x in opts.random_artist_categories])
+    artist = random.choice([x for x in artist_db.artists if x.category in allowed_cats])
 
     return prompt + ", " + artist.name if prompt != '' else artist.name
 
@@ -506,7 +503,7 @@ def create_toprow(is_img2img):
                         )
 
         with gr.Column(scale=1, elem_id="roll_col"):
-            roll = gr.Button(value=art_symbol, elem_id="roll", visible=len(shared.artist_db.artists) > 0)
+            roll = gr.Button(value=art_symbol, elem_id="roll", visible=len(artist_db.artists) > 0)
             paste = gr.Button(value=paste_symbol, elem_id="paste")
             save_style = gr.Button(value=save_style_symbol, elem_id="style_create")
             prompt_style_apply = gr.Button(value=apply_style_symbol, elem_id="style_apply")
@@ -578,7 +575,7 @@ def apply_setting(key, value):
     if value is None:
         return gr.update()
 
-    if shared.cmd_opts.freeze_settings:
+    if cmd_opts.freeze_settings:
         return gr.update()
 
     # dont allow model to be swapped when model hash exists in prompt
@@ -626,7 +623,7 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
     return refresh_button
 
 
-def create_ui(wrap_gradio_gpu_call):
+def create_ui(wrap_gradio_gpu_call, samplers, samplers_for_img2img):
     import modules.img2img
     import modules.txt2img
 
@@ -648,14 +645,20 @@ def create_ui(wrap_gradio_gpu_call):
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
                 steps = gr.Slider(minimum=1, maximum=150, step=1, label="Sampling Steps", value=20)
-                sampler_index = gr.Radio(label='Sampling method', elem_id="txt2img_sampling", choices=[x.name for x in samplers], value=samplers[0].name, type="index")
+                sampler_index = gr.Radio(
+                    label='Sampling method',
+                    elem_id="txt2img_sampling",
+                    choices=[x.name for x in samplers],
+                    value=samplers[0].name,
+                    type="index"
+                )
 
                 with gr.Group():
                     width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512)
                     height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512)
 
                 with gr.Row():
-                    restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(shared.face_restorers) > 1)
+                    restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(face_restorers) > 1)
                     tiling = gr.Checkbox(label='Tiling', value=False)
                     enable_hr = gr.Checkbox(label='Highres. fix', value=False)
 
@@ -687,7 +690,7 @@ def create_ui(wrap_gradio_gpu_call):
                         send_to_img2img = gr.Button('Send to img2img')
                         send_to_inpaint = gr.Button('Send to inpaint')
                         send_to_extras = gr.Button('Send to extras')
-                        button_id = "hidden_element" if shared.cmd_opts.hide_ui_dir_config else 'open_folder'
+                        button_id = "hidden_element" if cmd_opts.hide_ui_dir_config else 'open_folder'
                         open_txt2img_folder = gr.Button(folder_symbol, elem_id=button_id)
 
                     with gr.Row():
@@ -861,15 +864,16 @@ def create_ui(wrap_gradio_gpu_call):
                             inpaint_full_res_padding = gr.Slider(label='Inpaint at full resolution padding, pixels', minimum=0, maximum=256, step=4, value=32)
 
                     with gr.TabItem('Batch img2img', id='batch'):
-                        hidden = '<br>Disabled when launched with --hide-ui-dir-config.' if shared.cmd_opts.hide_ui_dir_config else ''
+                        hidden = '<br>Disabled when launched with --hide-ui-dir-config.' if cmd_opts.hide_ui_dir_config else ''
                         gr.HTML(f"<p class=\"text-gray-500\">Process images in a directory on the same machine where the server is running.<br>Use an empty output directory to save pictures normally instead of writing to the output directory.{hidden}</p>")
-                        img2img_batch_input_dir = gr.Textbox(label="Input directory", **shared.hide_dirs)
-                        img2img_batch_output_dir = gr.Textbox(label="Output directory", **shared.hide_dirs)
+                        img2img_batch_input_dir = gr.Textbox(label="Input directory", **hide_dirs)
+                        img2img_batch_output_dir = gr.Textbox(label="Output directory", **hide_dirs)
 
                 with gr.Row():
                     resize_mode = gr.Radio(label="Resize mode", elem_id="resize_mode", show_label=False, choices=["Just resize", "Crop and resize", "Resize and fill"], type="index", value="Just resize")
 
                 steps = gr.Slider(minimum=1, maximum=150, step=1, label="Sampling Steps", value=20)
+                # sampler_value = samplers_for_img2img[0].name if len(samplers_for_img2img) > 0 else None
                 sampler_index = gr.Radio(label='Sampling method', choices=[x.name for x in samplers_for_img2img], value=samplers_for_img2img[0].name, type="index")
 
                 with gr.Group():
@@ -877,7 +881,7 @@ def create_ui(wrap_gradio_gpu_call):
                     height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512, elem_id="img2img_height")
 
                 with gr.Row():
-                    restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(shared.face_restorers) > 1)
+                    restore_faces = gr.Checkbox(label='Restore faces', value=False, visible=len(face_restorers) > 1)
                     tiling = gr.Checkbox(label='Tiling', value=False)
 
                 with gr.Row():
@@ -905,7 +909,7 @@ def create_ui(wrap_gradio_gpu_call):
                         img2img_send_to_img2img = gr.Button('Send to img2img')
                         img2img_send_to_inpaint = gr.Button('Send to inpaint')
                         img2img_send_to_extras = gr.Button('Send to extras')
-                        button_id = "hidden_element" if shared.cmd_opts.hide_ui_dir_config else 'open_folder'
+                        button_id = "hidden_element" if cmd_opts.hide_ui_dir_config else 'open_folder'
                         open_img2img_folder = gr.Button(folder_symbol, elem_id=button_id)
 
                     with gr.Row():
@@ -1087,10 +1091,10 @@ def create_ui(wrap_gradio_gpu_call):
                         image_batch = gr.File(label="Batch Process", file_count="multiple", interactive=True, type="file")
 
                     with gr.TabItem('Batch from Directory'):
-                        extras_batch_input_dir = gr.Textbox(label="Input directory", **shared.hide_dirs,
+                        extras_batch_input_dir = gr.Textbox(label="Input directory", **hide_dirs,
                             placeholder="A directory on the same machine where the server is running."
                         )
-                        extras_batch_output_dir = gr.Textbox(label="Output directory", **shared.hide_dirs,
+                        extras_batch_output_dir = gr.Textbox(label="Output directory", **hide_dirs,
                             placeholder="Leave blank to save images to the default path."
                         )
                         show_extras_results = gr.Checkbox(label='Show result images', value=True)
@@ -1127,7 +1131,7 @@ def create_ui(wrap_gradio_gpu_call):
                 html_info = gr.HTML()
                 extras_send_to_img2img = gr.Button('Send to img2img')
                 extras_send_to_inpaint = gr.Button('Send to inpaint')
-                button_id = "hidden_element" if shared.cmd_opts.hide_ui_dir_config else ''
+                button_id = "hidden_element" if cmd_opts.hide_ui_dir_config else ''
                 open_extras_folder = gr.Button('Open output directory', elem_id=button_id)
 
 
@@ -1300,8 +1304,8 @@ def create_ui(wrap_gradio_gpu_call):
                         train_embedding_name = gr.Dropdown(label='Embedding', elem_id="train_embedding", choices=sorted(sd_hijack.model_hijack.embedding_db.word_embeddings.keys()))
                         create_refresh_button(train_embedding_name, sd_hijack.model_hijack.embedding_db.load_textual_inversion_embeddings, lambda: {"choices": sorted(sd_hijack.model_hijack.embedding_db.word_embeddings.keys())}, "refresh_train_embedding_name")
                     with gr.Row():
-                        train_hypernetwork_name = gr.Dropdown(label='Hypernetwork', elem_id="train_hypernetwork", choices=[x for x in shared.hypernetworks.keys()])
-                        create_refresh_button(train_hypernetwork_name, shared.reload_hypernetworks, lambda: {"choices": sorted([x for x in shared.hypernetworks.keys()])}, "refresh_train_hypernetwork_name")
+                        train_hypernetwork_name = gr.Dropdown(label='Hypernetwork', elem_id="train_hypernetwork", choices=[x for x in hypernetworks.keys()])
+                        create_refresh_button(train_hypernetwork_name, reload_hypernetworks, lambda: {"choices": sorted([x for x in hypernetworks.keys()])}, "refresh_train_hypernetwork_name")
                     with gr.Row():
                         embedding_learn_rate = gr.Textbox(label='Embedding Learning rate', placeholder="Embedding Learning rate", value="0.005")
                         hypernetwork_learn_rate = gr.Textbox(label='Hypernetwork Learning rate', placeholder="Hypernetwork Learning rate", value="0.00001")
@@ -1504,7 +1508,7 @@ Requested path was: {f}
 """, file=sys.stderr)
             return
 
-        if not shared.cmd_opts.hide_ui_dir_config:
+        if not cmd_opts.hide_ui_dir_config:
             path = os.path.normpath(f)
             if platform.system() == "Windows":
                 os.startfile(path)
@@ -1516,7 +1520,7 @@ Requested path was: {f}
     def run_settings(*args):
         changed = 0
 
-        assert not shared.cmd_opts.freeze_settings, "changing settings is disabled"
+        assert not cmd_opts.freeze_settings, "changing settings is disabled"
 
         for key, value, comp in zip(opts.data_labels.keys(), args, components):
             if comp != dummy_component and not opts.same_type(value, opts.data_labels[key].default):
@@ -1547,7 +1551,7 @@ Requested path was: {f}
         return f'{changed} settings changed.', opts.dumpjson()
 
     def run_settings_single(value, key):
-        assert not shared.cmd_opts.freeze_settings, "changing settings is disabled"
+        assert not cmd_opts.freeze_settings, "changing settings is disabled"
 
         if not opts.same_type(value, opts.data_labels[key].default):
             return gr.update(visible=True), opts.dumpjson()
@@ -1601,7 +1605,7 @@ Requested path was: {f}
                     elem_id, text = item.section
                     gr.HTML(elem_id="settings_header_text_{}".format(elem_id), value='<h1 class="gr-button-lg">{}</h1>'.format(text))
 
-                if k in quicksettings_names and not shared.cmd_opts.freeze_settings:
+                if k in quicksettings_names and not cmd_opts.freeze_settings:
                     quicksettings_list.append((i, k, item))
                     components.append(dummy_component)
                 else:
@@ -1913,7 +1917,7 @@ def load_javascript(raw_response):
     if cmd_opts.theme is not None:
         javascript += f"\n<script>set_theme('{cmd_opts.theme}');</script>\n"
 
-    javascript += f"\n<script>{localization.localization_js(shared.opts.localization)}</script>"
+    javascript += f"\n<script>{localization.localization_js(opts.localization)}</script>"
 
     def template_response(*args, **kwargs):
         res = raw_response(*args, **kwargs)

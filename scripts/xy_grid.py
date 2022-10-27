@@ -1,23 +1,24 @@
-from collections import namedtuple
-from copy import copy
-from itertools import permutations, chain
 import random
 import csv
-from io import StringIO
-from PIL import Image
 import numpy as np
-
-import modules.scripts as scripts
 import gradio as gr
+import re
 
-from modules import images
-from modules.hypernetworks import hypernetwork
-from modules.processing import process_images, Processed, get_correct_sampler, StableDiffusionProcessingTxt2Img
-from modules.shared import opts, cmd_opts, state
+import modules.shared_steps.options as shared_opts
+import modules.scripts as scripts
+import modules.images as images
 import modules.shared as shared
 import modules.sd_samplers
 import modules.sd_models
-import re
+
+from collections import namedtuple
+from copy import copy
+from itertools import permutations, chain
+from io import StringIO
+from PIL import Image
+
+from modules.hypernetworks import hypernetwork
+from modules.processing import process_images, Processed, get_correct_sampler, StableDiffusionProcessingTxt2Img
 
 
 def apply_field(field):
@@ -121,7 +122,7 @@ def confirm_hypernetworks(p, xs):
 
 
 def apply_clip_skip(p, x, xs):
-    opts.data["CLIP_stop_at_last_layers"] = x
+    shared_opts.opts.data["CLIP_stop_at_last_layers"] = x
 
 
 def format_value_add_label(p, opt, x):
@@ -193,11 +194,11 @@ def draw_xy_grid(p, xs, ys, x_labels, y_labels, cell, draw_legend, include_lone_
     cell_mode = "P"
     cell_size = (1,1)
 
-    state.job_count = len(xs) * len(ys) * p.n_iter
+    shared.state.job_count = len(xs) * len(ys) * p.n_iter
 
     for iy, y in enumerate(ys):
         for ix, x in enumerate(xs):
-            state.job = f"{ix + iy * len(xs) + 1} out of {len(xs) * len(ys)}"
+            shared.state.job = f"{ix + iy * len(xs) + 1} out of {len(xs) * len(ys)}"
 
             processed:Processed = cell(x, y)
             try:
@@ -236,8 +237,8 @@ def draw_xy_grid(p, xs, ys, x_labels, y_labels, cell, draw_legend, include_lone_
 
 class SharedSettingsStackHelper(object):
     def __enter__(self):
-        self.CLIP_stop_at_last_layers = opts.CLIP_stop_at_last_layers
-        self.hypernetwork = opts.sd_hypernetwork
+        self.CLIP_stop_at_last_layers = shared_opts.opts.CLIP_stop_at_last_layers
+        self.hypernetwork = shared_opts.opts.sd_hypernetwork
         self.model = shared.sd_model
   
     def __exit__(self, exc_type, exc_value, tb):
@@ -246,7 +247,7 @@ class SharedSettingsStackHelper(object):
         hypernetwork.load_hypernetwork(self.hypernetwork)
         hypernetwork.apply_strength()
 
-        opts.data["CLIP_stop_at_last_layers"] = self.CLIP_stop_at_last_layers
+        shared_opts.opts.data["CLIP_stop_at_last_layers"] = self.CLIP_stop_at_last_layers
 
 
 re_range = re.compile(r"\s*([+-]?\s*\d+)\s*-\s*([+-]?\s*\d+)(?:\s*\(([+-]\d+)\s*\))?\s*")
@@ -280,7 +281,7 @@ class Script(scripts.Script):
         if not no_fixed_seeds:
             modules.processing.fix_seed(p)
 
-        if not opts.return_grid:
+        if not shared_opts.opts.return_grid:
             p.batch_size = 1
 
         def process_axis(opt, vals):
@@ -392,7 +393,7 @@ class Script(scripts.Script):
                 include_lone_images=include_lone_images
             )
 
-        if opts.grid_save:
+        if shared_opts.opts.grid_save:
             images.save_image(processed.images[0], p.outpath_grids, "xy_grid", prompt=p.prompt, seed=processed.seed, grid=True, p=p)
 
         return processed

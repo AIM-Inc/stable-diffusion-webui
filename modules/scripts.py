@@ -1,13 +1,17 @@
 import os
 import sys
 import traceback
-from collections import namedtuple
 
 import modules.ui as ui
 import gradio as gr
 
+import modules.paths as paths
+import modules.script_callbacks as script_callbacks
+import modules.shared as shared
+
+from collections import namedtuple
+
 from modules.processing import StableDiffusionProcessing
-from modules import shared, paths, script_callbacks
 
 AlwaysVisible = object()
 

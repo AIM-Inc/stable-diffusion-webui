@@ -1,16 +1,18 @@
-from collections import namedtuple
 import numpy as np
 import torch
-import tqdm
-from PIL import Image
+
 import inspect
 import k_diffusion.sampling
 import ldm.models.diffusion.ddim
 import ldm.models.diffusion.plms
-from modules import prompt_parser, devices, processing, images
 
-from modules.shared import opts, cmd_opts, state
 import modules.shared as shared
+import modules.prompt_parser as prompt_parser
+import modules.processing as processing
+import modules.images as images
+
+from PIL import Image
+from collections import namedtuple
 
 
 SamplerData = namedtuple('SamplerData', ['name', 'constructor', 'aliases', 'options'])
@@ -55,15 +57,16 @@ def create_sampler_with_index(list_of_configs, index, model):
 
 def set_samplers():
     global samplers, samplers_for_img2img
+    import modules.shared_steps.options as shared_options
 
-    hidden = set(opts.hide_samplers)
-    hidden_img2img = set(opts.hide_samplers + ['PLMS'])
+    hidden = set(shared_options.opts.hide_samplers)
+    hidden_img2img = set(shared_options.opts.hide_samplers + ['PLMS'])
 
     samplers = [x for x in all_samplers if x.name not in hidden]
     samplers_for_img2img = [x for x in all_samplers if x.name not in hidden_img2img]
 
+    return samplers, samplers_for_img2img
 
-set_samplers()
 
 sampler_extra_params = {
     'sample_euler': ['s_churn', 's_tmin', 's_tmax', 's_noise'],
@@ -73,7 +76,7 @@ sampler_extra_params = {
 
 
 def setup_img2img_steps(p, steps=None):
-    if opts.img2img_fix_steps or steps is not None:
+    if shared.opts.img2img_fix_steps or steps is not None:
         steps = int((steps or p.steps) / min(p.denoising_strength, 0.999)) if p.denoising_strength > 0 else 0
         t_enc = p.steps - 1
     else:
@@ -100,9 +103,9 @@ def samples_to_image_grid(samples):
 
 
 def store_latent(decoded):
-    state.current_latent = decoded
+    shared.state.current_latent = decoded
 
-    if opts.show_progress_every_n_steps > 0 and shared.state.sampling_step % opts.show_progress_every_n_steps == 0:
+    if shared.opts.show_progress_every_n_steps > 0 and shared.state.sampling_step % shared.opts.show_progress_every_n_steps == 0:
         if not shared.parallel_processing_allowed:
             shared.state.current_image = sample_to_image(decoded)
 
@@ -132,8 +135,8 @@ class VanillaStableDiffusionSampler:
         return 0
 
     def launch_sampling(self, steps, func):
-        state.sampling_steps = steps
-        state.sampling_step = 0
+        shared.state.sampling_steps = steps
+        shared.state.sampling_step = 0
 
         try:
             return func()
@@ -141,7 +144,7 @@ class VanillaStableDiffusionSampler:
             return self.last_latent
 
     def p_sample_ddim_hook(self, x_dec, cond, ts, unconditional_conditioning, *args, **kwargs):
-        if state.interrupted or state.skipped:
+        if shared.state.interrupted or shared.state.skipped:
             raise InterruptedException
 
         if self.stop_at is not None and self.step > self.stop_at:
@@ -190,13 +193,13 @@ class VanillaStableDiffusionSampler:
         store_latent(self.last_latent)
 
         self.step += 1
-        state.sampling_step = self.step
+        shared.state.sampling_step = self.step
         shared.total_tqdm.update()
 
         return res
 
     def initialize(self, p):
-        self.eta = p.eta if p.eta is not None else opts.eta_ddim
+        self.eta = p.eta if p.eta is not None else shared.opts.eta_ddim
 
         for fieldname in ['p_sample_ddim', 'p_sample_plms']:
             if hasattr(self.sampler, fieldname):
@@ -265,7 +268,7 @@ class CFGDenoiser(torch.nn.Module):
         self.step = 0
 
     def forward(self, x, sigma, uncond, cond, cond_scale, image_cond):
-        if state.interrupted or state.skipped:
+        if shared.state.interrupted or shared.state.skipped:
             raise InterruptedException
 
         conds_list, tensor = prompt_parser.reconstruct_multicond_batch(cond, self.step)
@@ -354,12 +357,12 @@ class KDiffusionSampler:
         if self.stop_at is not None and step > self.stop_at:
             raise InterruptedException
 
-        state.sampling_step = step
+        shared.state.sampling_step = step
         shared.total_tqdm.update()
 
     def launch_sampling(self, steps, func):
-        state.sampling_steps = steps
-        state.sampling_step = 0
+        shared.state.sampling_steps = steps
+        shared.state.sampling_step = 0
 
         try:
             return func()
@@ -385,7 +388,7 @@ class KDiffusionSampler:
         self.model_wrap_cfg.nmask = p.nmask if hasattr(p, 'nmask') else None
         self.model_wrap.step = 0
         self.sampler_noise_index = 0
-        self.eta = p.eta or opts.eta_ancestral
+        self.eta = p.eta or shared.opts.eta_ancestral
 
         if self.sampler_noises is not None:
             k_diffusion.sampling.torch = TorchHijack(self)
@@ -469,3 +472,6 @@ class KDiffusionSampler:
 
         return samples
 
+
+if __name__ == "__main__":
+    set_samplers()

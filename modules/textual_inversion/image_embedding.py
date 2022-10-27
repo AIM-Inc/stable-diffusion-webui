@@ -2,10 +2,11 @@ import base64
 import json
 import numpy as np
 import zlib
-from PIL import Image, PngImagePlugin, ImageDraw, ImageFont
-from fonts.ttf import Roboto
 import torch
-from modules.shared import opts
+import modules.shared # fixes ciruclar import
+
+from PIL import Image, ImageDraw, ImageFont
+from fonts.ttf import Roboto
 
 
 class EmbeddingEncoder(json.JSONEncoder):
@@ -137,8 +138,8 @@ def caption_image_overlay(srcimage, title, footerLeft, footerMid, footerRight, t
     fontsize = 32
     if textfont is None:
         try:
-            textfont = ImageFont.truetype(opts.font or Roboto, fontsize)
-            textfont = opts.font or Roboto
+            textfont = ImageFont.truetype(modules.shared.opts.font or Roboto, fontsize)
+            textfont = modules.shared.opts.font or Roboto
         except Exception:
             textfont = Roboto
 

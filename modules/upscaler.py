@@ -1,13 +1,14 @@
 import os
-from abc import abstractmethod
-
 import PIL
-import numpy as np
-import torch
+
+import modules.shared_steps.options as shared_opts
+import modules.modelloader as modelloader
+import modules.shared as shared
+
+from abc import abstractmethod
 from PIL import Image
 
-import modules.shared
-from modules import modelloader, shared
+from modules.command_options.options import cmd_opts
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 from modules.paths import models_path
@@ -22,18 +23,18 @@ class Upscaler:
     filter = None
     model = None
     user_path = None
-    scalers: []
+    scalers = []
     tile = True
 
     def __init__(self, create_dirs=False):
         self.mod_pad_h = None
-        self.tile_size = modules.shared.opts.ESRGAN_tile
-        self.tile_pad = modules.shared.opts.ESRGAN_tile_overlap
-        self.device = modules.shared.device
+        self.tile_size = shared_opts.opts.ESRGAN_tile
+        self.tile_pad = shared_opts.opts.ESRGAN_tile_overlap
+        self.device = shared.device
         self.img = None
         self.output = None
         self.scale = 1
-        self.half = not modules.shared.cmd_opts.no_half
+        self.half = not cmd_opts.no_half
         self.pre_pad = 0
         self.mod_scale = None
 

@@ -1,19 +1,15 @@
-import math
 import os
-import sys
-import traceback
 
-import numpy as np
-from PIL import Image, ImageOps, ImageChops
-
-from modules import devices
-from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images
-from modules.shared import opts, state
 import modules.shared as shared
 import modules.processing as processing
-from modules.ui import plaintext_to_html
-import modules.images as images
 import modules.scripts
+
+from PIL import Image, ImageOps, ImageChops
+
+from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images
+from modules.shared_steps.options import opts
+from modules.shared import state
+from modules.ui import plaintext_to_html
 
 
 def process_batch(p, input_dir, output_dir, args):

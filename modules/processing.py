@@ -1,25 +1,33 @@
 import json
 import math
 import os
-import sys
+import logging
 
 import torch
 import numpy as np
-from PIL import Image, ImageFilter, ImageOps
 import random
 import cv2
-from skimage import exposure
-from typing import Any, Dict, List, Optional
 
-import modules.sd_hijack
-from modules import devices, prompt_parser, masking, sd_samplers, lowvram, generation_parameters_copypaste
-from modules.sd_hijack import model_hijack
-from modules.shared import opts, cmd_opts, state
+import modules.devices as devices
+import modules.generation_parameters_copypaste as generation_parameters_copypaste
+import modules.lowvram as lowvram
+import modules.prompt_parser as prompt_parser
+import modules.masking as masking
+import modules.sd_samplers as sd_samplers
 import modules.shared as shared
 import modules.face_restoration
 import modules.images as images
 import modules.styles
-import logging
+import modules.sd_hijack
+import modules.shared_steps.options as shared_opts
+import modules.command_options.options as options
+
+from PIL import Image, ImageFilter, ImageOps
+from skimage import exposure
+from typing import Any, Dict, List
+
+from modules.paths import script_path
+from modules.sd_hijack import model_hijack
 
 
 # some of those options should not be changed at all because they would break the model, so I removed them from options.
@@ -110,11 +118,11 @@ class StableDiffusionProcessing():
         self.color_corrections = None
         self.denoising_strength: float = denoising_strength
         self.sampler_noise_scheduler_override = None
-        self.ddim_discretize = ddim_discretize or opts.ddim_discretize
-        self.s_churn = s_churn or opts.s_churn
-        self.s_tmin = s_tmin or opts.s_tmin
+        self.ddim_discretize = ddim_discretize or shared_opts.opts.ddim_discretize
+        self.s_churn = s_churn or shared_opts.opts.s_churn
+        self.s_tmin = s_tmin or shared_opts.opts.s_tmin
         self.s_tmax = s_tmax or float('inf')  # not representable as a standard ui option
-        self.s_noise = s_noise or opts.s_noise
+        self.s_noise = s_noise or shared_opts.opts.s_noise
         self.override_settings = {k: v for k, v in (override_settings or {}).items() if k not in shared.restricted_opts}
 
         if not seed_enable_extras:
@@ -153,7 +161,7 @@ class Processed:
         self.steps = p.steps
         self.batch_size = p.batch_size
         self.restore_faces = p.restore_faces
-        self.face_restoration_model = opts.face_restoration_model if p.restore_faces else None
+        self.face_restoration_model = shared_opts.opts.face_restoration_model if p.restore_faces else None
         self.sd_model_hash = shared.sd_model.sd_model_hash
         self.seed_resize_from_w = p.seed_resize_from_w
         self.seed_resize_from_h = p.seed_resize_from_h
@@ -161,8 +169,8 @@ class Processed:
         self.extra_generation_params = p.extra_generation_params
         self.index_of_first_image = index_of_first_image
         self.styles = p.styles
-        self.job_timestamp = state.job_timestamp
-        self.clip_skip = opts.CLIP_stop_at_last_layers
+        self.job_timestamp = shared.state.job_timestamp
+        self.clip_skip = shared_opts.opts.CLIP_stop_at_last_layers
 
         self.eta = p.eta
         self.ddim_discretize = p.ddim_discretize
@@ -240,7 +248,7 @@ def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, see
     # enables the generation of additional tensors with noise that the sampler will use during its processing.
     # Using those pre-generated tensors instead of simple torch.randn allows a batch with seeds [100, 101] to
     # produce the same images as with two batches [100], [101].
-    if p is not None and p.sampler is not None and (len(seeds) > 1 and opts.enable_batch_seeds or opts.eta_noise_seed_delta > 0):
+    if p is not None and p.sampler is not None and (len(seeds) > 1 and shared_opts.opts.enable_batch_seeds or shared_opts.opts.eta_noise_seed_delta > 0):
         sampler_noises = [[] for _ in range(p.sampler.number_of_needed_noises(p))]
     else:
         sampler_noises = None
@@ -280,8 +288,8 @@ def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, see
         if sampler_noises is not None:
             cnt = p.sampler.number_of_needed_noises(p)
 
-            if opts.eta_noise_seed_delta > 0:
-                torch.manual_seed(seed + opts.eta_noise_seed_delta)
+            if shared_opts.opts.eta_noise_seed_delta > 0:
+                torch.manual_seed(seed + shared_opts.opts.eta_noise_seed_delta)
 
             for j in range(cnt):
                 sampler_noises[j].append(devices.randn_without_seed(tuple(noise_shape)))
@@ -317,17 +325,17 @@ def fix_seed(p):
 def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments, iteration=0, position_in_batch=0):
     index = position_in_batch + iteration * p.batch_size
 
-    clip_skip = getattr(p, 'clip_skip', opts.CLIP_stop_at_last_layers)
+    clip_skip = getattr(p, 'clip_skip', shared_opts.opts.CLIP_stop_at_last_layers)
 
     generation_params = {
         "Steps": p.steps,
         "Sampler": get_correct_sampler(p)[p.sampler_index].name,
         "CFG scale": p.cfg_scale,
         "Seed": all_seeds[index],
-        "Face restoration": (opts.face_restoration_model if p.restore_faces else None),
+        "Face restoration": (shared_opts.opts.face_restoration_model if p.restore_faces else None),
         "Size": f"{p.width}x{p.height}",
-        "Model hash": getattr(p, 'sd_model_hash', None if not opts.add_model_hash_to_info or not shared.sd_model.sd_model_hash else shared.sd_model.sd_model_hash),
-        "Model": (None if not opts.add_model_name_to_info or not shared.sd_model.sd_checkpoint_info.model_name else shared.sd_model.sd_checkpoint_info.model_name.replace(',', '').replace(':', '')),
+        "Model hash": getattr(p, 'sd_model_hash', None if not shared_opts.opts.add_model_hash_to_info or not shared.sd_model.sd_model_hash else shared.sd_model.sd_model_hash),
+        "Model": (None if not shared_opts.opts.add_model_name_to_info or not shared.sd_model.sd_checkpoint_info.model_name else shared.sd_model.sd_checkpoint_info.model_name.replace(',', '').replace(':', '')),
         "Hypernet": (None if shared.loaded_hypernetwork is None else shared.loaded_hypernetwork.name),
         "Batch size": (None if p.batch_size < 2 else p.batch_size),
         "Batch pos": (None if p.batch_size < 2 else position_in_batch),
@@ -337,7 +345,7 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments, iteration
         "Denoising strength": getattr(p, 'denoising_strength', None),
         "Eta": (None if p.sampler is None or p.sampler.eta == p.sampler.default_eta else p.sampler.eta),
         "Clip skip": None if clip_skip <= 1 else clip_skip,
-        "ENSD": None if opts.eta_noise_seed_delta == 0 else opts.eta_noise_seed_delta,
+        "ENSD": None if shared_opts.opts.eta_noise_seed_delta == 0 else shared_opts.opts.eta_noise_seed_delta,
     }
 
     generation_params.update(p.extra_generation_params)
@@ -350,17 +358,17 @@ def create_infotext(p, all_prompts, all_seeds, all_subseeds, comments, iteration
 
 
 def process_images(p: StableDiffusionProcessing) -> Processed:
-    stored_opts = {k: opts.data[k] for k in p.override_settings.keys()}
+    stored_opts = {k: shared_opts.opts.data[k] for k in p.override_settings.keys()}
 
     try:
         for k, v in p.override_settings.items():
-            opts.data[k] = v  # we don't call onchange for simplicity which makes changing model, hypernet impossible
+            shared_opts.opts.data[k] = v  # we don't call onchange for simplicity which makes changing model, hypernet impossible
 
         res = process_images_inner(p)
 
     finally:
         for k, v in stored_opts.items():
-            opts.data[k] = v
+            shared_opts.opts.data[k] = v
 
     return res
 
@@ -373,7 +381,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     else:
         assert p.prompt is not None
 
-    with open(os.path.join(shared.script_path, "params.txt"), "w", encoding="utf8") as file:
+    with open(os.path.join(script_path, "params.txt"), "w", encoding="utf8") as file:
         processed = Processed(p, [], p.seed, "")
         file.write(processed.infotext(p, 0))
 
@@ -407,7 +415,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
     def infotext(iteration=0, position_in_batch=0):
         return create_infotext(p, p.all_prompts, p.all_seeds, p.all_subseeds, comments, iteration, position_in_batch)
 
-    if os.path.exists(cmd_opts.embeddings_dir) and not p.do_not_reload_embeddings:
+    if os.path.exists(options.cmd_opts.embeddings_dir) and not p.do_not_reload_embeddings:
         model_hijack.embedding_db.load_textual_inversion_embeddings()
 
     if p.scripts is not None:
@@ -420,14 +428,14 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         with devices.autocast():
             p.init(p.all_prompts, p.all_seeds, p.all_subseeds)
 
-        if state.job_count == -1:
-            state.job_count = p.n_iter
+        if shared.state.job_count == -1:
+            shared.state.job_count = p.n_iter
 
         for n in range(p.n_iter):
-            if state.skipped:
-                state.skipped = False
-            
-            if state.interrupted:
+            if shared.state.skipped:
+                shared.state.skipped = False
+
+            if shared.state.interrupted:
                 break
 
             prompts = p.all_prompts[n * p.batch_size:(n + 1) * p.batch_size]
@@ -457,13 +465,12 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
             del samples_ddim
 
-            if shared.cmd_opts.lowvram or shared.cmd_opts.medvram:
+            if options.cmd_opts.lowvram or options.cmd_opts.medvram:
                 lowvram.send_everything_to_cpu()
 
             devices.torch_gc()
 
-            if opts.filter_nsfw:
-                import modules.safety as safety
+            if shared_opts.opts.filter_nsfw:
                 x_samples_ddim = modules.safety.censor_batch(x_samples_ddim)
 
             for i, x_sample in enumerate(x_samples_ddim):
@@ -471,8 +478,8 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 x_sample = x_sample.astype(np.uint8)
 
                 if p.restore_faces:
-                    if opts.save and not p.do_not_save_samples and opts.save_images_before_face_restoration:
-                        images.save_image(Image.fromarray(x_sample), p.outpath_samples, "", seeds[i], prompts[i], opts.samples_format, info=infotext(n, i), p=p, suffix="-before-face-restoration")
+                    if shared_opts.opts.save and not p.do_not_save_samples and shared_opts.opts.save_images_before_face_restoration:
+                        images.save_image(Image.fromarray(x_sample), p.outpath_samples, "", seeds[i], prompts[i], shared_opts.opts.samples_format, info=infotext(n, i), p=p, suffix="-before-face-restoration")
 
                     devices.torch_gc()
 
@@ -482,19 +489,19 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                 image = Image.fromarray(x_sample)
 
                 if p.color_corrections is not None and i < len(p.color_corrections):
-                    if opts.save and not p.do_not_save_samples and opts.save_images_before_color_correction:
+                    if shared_opts.opts.save and not p.do_not_save_samples and shared_opts.opts.save_images_before_color_correction:
                         image_without_cc = apply_overlay(image, p.paste_to, i, p.overlay_images)
-                        images.save_image(image_without_cc, p.outpath_samples, "", seeds[i], prompts[i], opts.samples_format, info=infotext(n, i), p=p, suffix="-before-color-correction")
+                        images.save_image(image_without_cc, p.outpath_samples, "", seeds[i], prompts[i], shared_opts.opts.samples_format, info=infotext(n, i), p=p, suffix="-before-color-correction")
                     image = apply_color_correction(p.color_corrections[i], image)
 
                 image = apply_overlay(image, p.paste_to, i, p.overlay_images)
 
-                if opts.samples_save and not p.do_not_save_samples:
-                    images.save_image(image, p.outpath_samples, "", seeds[i], prompts[i], opts.samples_format, info=infotext(n, i), p=p)
+                if shared_opts.opts.samples_save and not p.do_not_save_samples:
+                    images.save_image(image, p.outpath_samples, "", seeds[i], prompts[i], shared_opts.opts.samples_format, info=infotext(n, i), p=p)
 
                 text = infotext(n, i)
                 infotexts.append(text)
-                if opts.enable_pnginfo:
+                if shared_opts.opts.enable_pnginfo:
                     image.info["parameters"] = text
                 output_images.append(image)
 
@@ -502,25 +509,25 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
 
             devices.torch_gc()
 
-            state.nextjob()
+            shared.state.nextjob()
 
         p.color_corrections = None
 
         index_of_first_image = 0
-        unwanted_grid_because_of_img_count = len(output_images) < 2 and opts.grid_only_if_multiple
-        if (opts.return_grid or opts.grid_save) and not p.do_not_save_grid and not unwanted_grid_because_of_img_count:
+        unwanted_grid_because_of_img_count = len(output_images) < 2 and shared_opts.opts.grid_only_if_multiple
+        if (shared_opts.opts.return_grid or shared_opts.opts.grid_save) and not p.do_not_save_grid and not unwanted_grid_because_of_img_count:
             grid = images.image_grid(output_images, p.batch_size)
 
-            if opts.return_grid:
+            if shared_opts.opts.return_grid:
                 text = infotext()
                 infotexts.insert(0, text)
-                if opts.enable_pnginfo:
+                if shared_opts.opts.enable_pnginfo:
                     grid.info["parameters"] = text
                 output_images.insert(0, grid)
                 index_of_first_image = 1
 
-            if opts.grid_save:
-                images.save_image(grid, p.outpath_grids, "grid", p.all_seeds[0], p.all_prompts[0], opts.grid_format, info=infotext(), short_filename=not opts.grid_extended_filename, p=p, grid=True)
+            if shared_opts.opts.grid_save:
+                images.save_image(grid, p.outpath_grids, "grid", p.all_seeds[0], p.all_prompts[0], shared_opts.opts.grid_format, info=infotext(), short_filename=not shared_opts.opts.grid_extended_filename, p=p, grid=True)
 
     devices.torch_gc()
     return Processed(p, output_images, p.all_seeds[0], infotext() + "".join(["\n\n" + x for x in comments]), subseed=p.all_subseeds[0], all_prompts=p.all_prompts, all_seeds=p.all_seeds, all_subseeds=p.all_subseeds, index_of_first_image=index_of_first_image, infotexts=infotexts)
@@ -540,10 +547,10 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
 
     def init(self, all_prompts, all_seeds, all_subseeds):
         if self.enable_hr:
-            if state.job_count == -1:
-                state.job_count = self.n_iter * 2
+            if shared.state.job_count == -1:
+                shared.state.job_count = self.n_iter * 2
             else:
-                state.job_count = state.job_count * 2
+                shared.state.job_count = shared.state.job_count * 2
 
             self.extra_generation_params["First pass size"] = f"{self.firstphase_width}x{self.firstphase_height}"
 
@@ -605,7 +612,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
 
         samples = samples[:, :, self.truncate_y//2:samples.shape[2]-self.truncate_y//2, self.truncate_x//2:samples.shape[3]-self.truncate_x//2]
 
-        if opts.use_scale_latent_for_hires_fix:
+        if shared_opts.opts.use_scale_latent_for_hires_fix:
             samples = torch.nn.functional.interpolate(samples, size=(self.height // opt_f, self.width // opt_f), mode="bilinear")
 
         else:
@@ -701,7 +708,7 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
 
         latent_mask = self.latent_mask if self.latent_mask is not None else self.image_mask
 
-        add_color_corrections = opts.img2img_color_correction and self.color_corrections is None
+        add_color_corrections = shared_opts.opts.img2img_color_correction and self.color_corrections is None
         if add_color_corrections:
             self.color_corrections = []
         imgs = []
