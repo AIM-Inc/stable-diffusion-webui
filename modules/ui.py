@@ -697,7 +697,7 @@ def create_ui(wrap_gradio_gpu_call):
                         download_files = gr.File(None, file_count="multiple", interactive=False, show_label=False, visible=False)
 
                     with gr.Group():
-                        html_info = gr.HTML()
+                        html_info = gr.HTML(elem_id='txt2img_output_info')
                         generation_info = gr.Textbox(visible=False)
 
             connect_reuse_seed(seed, reuse_seed, generation_info, dummy_component, is_subseed=False)
@@ -784,7 +784,8 @@ def create_ui(wrap_gradio_gpu_call):
                 ]
             )
 
-            global txt2img_paste_fields 
+            global txt2img_paste_fields
+            # This is mostly used for the copy/paste functions/buttons
             txt2img_paste_fields = [
                 (txt2img_prompt, "Prompt"),
                 (txt2img_negative_prompt, "Negative prompt"),
@@ -808,6 +809,7 @@ def create_ui(wrap_gradio_gpu_call):
                 *modules.scripts.scripts_txt2img.infotext_fields
             ]
 
+            # This is used mostly for training
             txt2img_preview_params = [
                 txt2img_prompt,
                 txt2img_negative_prompt,
@@ -1104,9 +1106,9 @@ def create_ui(wrap_gradio_gpu_call):
                                 upscaling_resize_w = gr.Number(label="Width", value=512, precision=0)
                                 upscaling_resize_h = gr.Number(label="Height", value=512, precision=0)
                             upscaling_crop = gr.Checkbox(label='Crop to fit', value=True)
-                
+
                 with gr.Group():
-                    extras_upscaler_1 = gr.Radio(label='Upscaler 1', elem_id="extras_upscaler_1", choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index") 
+                    extras_upscaler_1 = gr.Radio(label='Upscaler 1', elem_id="extras_upscaler_1", choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index")
 
                 with gr.Group():
                     extras_upscaler_2 = gr.Radio(label='Upscaler 2', elem_id="extras_upscaler_2", choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index")
@@ -1193,7 +1195,7 @@ def create_ui(wrap_gradio_gpu_call):
             inputs=[image],
             outputs=[html, generation_info, html2],
         )
-   
+
     with gr.Blocks() as modelmerger_interface:
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
@@ -1905,7 +1907,7 @@ def load_javascript(raw_response):
         javascript = f'<script>{jsfile.read()}</script>'
 
     scripts_list = modules.scripts.list_scripts("javascript", ".js")
-    
+
     for basedir, filename, path in scripts_list:
         with open(path, "r", encoding="utf8") as jsfile:
             javascript += f"\n<!-- {filename} --><script>{jsfile.read()}</script>"
