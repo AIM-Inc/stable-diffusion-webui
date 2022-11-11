@@ -17,7 +17,7 @@ from fonts.ttf import Roboto
 import string
 
 from modules import sd_samplers, shared, script_callbacks
-from modules.shared import opts, cmd_opts
+from modules.shared import opts
 
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 
@@ -426,7 +426,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
             The directory to save the image. Note, the option `save_to_dirs` will make the image to be saved into a sub directory.
         basename (`str`):
             The base filename which will be applied to `filename pattern`.
-        seed, prompt, short_filename, 
+        seed, prompt, short_filename,
         extension (`str`):
             Image file extension, default is `png`.
         pngsectionname (`str`):
