@@ -1,7 +1,6 @@
 import json
 import math
 import os
-import sys
 
 import torch
 import numpy as np
@@ -9,7 +8,7 @@ from PIL import Image, ImageFilter, ImageOps
 import random
 import cv2
 from skimage import exposure
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import modules.sd_hijack
 from modules import devices, prompt_parser, masking, sd_samplers, lowvram, generation_parameters_copypaste
@@ -426,7 +425,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
         for n in range(p.n_iter):
             if state.skipped:
                 state.skipped = False
-            
+
             if state.interrupted:
                 break
 
@@ -498,7 +497,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     image.info["parameters"] = text
                 output_images.append(image)
 
-            del x_samples_ddim 
+            del x_samples_ddim
 
             devices.torch_gc()
 
@@ -578,7 +577,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
 
             # The "masked-image" in this case will just be all zeros since the entire image is masked.
             image_conditioning = torch.zeros(x.shape[0], 3, height, width, device=x.device)
-            image_conditioning = self.sd_model.get_first_stage_encoding(self.sd_model.encode_first_stage(image_conditioning)) 
+            image_conditioning = self.sd_model.get_first_stage_encoding(self.sd_model.encode_first_stage(image_conditioning))
 
             # Add the fake full 1s mask to the first dimension.
             image_conditioning = torch.nn.functional.pad(image_conditioning, (0, 0, 0, 0, 1, 0), value=1.0)
