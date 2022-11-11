@@ -1,11 +1,10 @@
 # this file is adapted from https://github.com/victorca25/iNNfer
-
 import math
-import functools
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from typing import OrderedDict
 
 ####################
 # RRDBNet Generator
@@ -105,7 +104,7 @@ class ResidualDenseBlock_5C(nn.Module):
     Modified options that can be used:
         - "Partial Convolution based Padding" arXiv:1811.11718
         - "Spectral normalization" arXiv:1802.05957
-        - "ICASSP 2020 - ESRGAN+ : Further Improving ESRGAN" N. C. 
+        - "ICASSP 2020 - ESRGAN+ : Further Improving ESRGAN" N. C.
             {Rakotonirina} and A. {Rasoanaivo}
     """
 
@@ -170,7 +169,7 @@ class GaussianNoise(nn.Module):
             scale = self.sigma * x.detach() if self.is_relative_detach else self.sigma * x
             sampled_noise = self.noise.repeat(*x.size()).normal_() * scale
             x = x + sampled_noise
-        return x 
+        return x
 
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
@@ -309,17 +308,9 @@ def upconv_block(in_nc, out_nc, upscale_factor=2, kernel_size=3, stride=1, bias=
                         pad_type=pad_type, norm_type=norm_type, act_type=act_type, convtype=convtype)
     return sequential(upsample, conv)
 
-
-
-
-
-
-
-
 ####################
 # Basic blocks
 ####################
-
 
 def make_layer(basic_block, num_basic_block, **kwarg):
     """Make layers by stacking the same blocks.
@@ -436,10 +427,10 @@ def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=
     p = pad(pad_type, padding) if pad_type and pad_type != 'zero' else None
     padding = padding if pad_type == 'zero' else 0
 
-    if convtype=='PartialConv2D':
+    if convtype =='PartialConv2D':
         c = PartialConv2d(in_nc, out_nc, kernel_size=kernel_size, stride=stride, padding=padding,
                dilation=dilation, bias=bias, groups=groups)
-    elif convtype=='DeformConv2D':
+    elif convtype =='DeformConv2D':
         c = DeformConv2d(in_nc, out_nc, kernel_size=kernel_size, stride=stride, padding=padding,
                dilation=dilation, bias=bias, groups=groups)
     elif convtype=='Conv3D':
