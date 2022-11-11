@@ -2,8 +2,6 @@ import os
 from abc import abstractmethod
 
 import PIL
-import numpy as np
-import torch
 from PIL import Image
 
 import modules.shared
@@ -22,7 +20,7 @@ class Upscaler:
     filter = None
     model = None
     user_path = None
-    scalers: []
+    scalers = []
     tile = True
 
     def __init__(self, create_dirs=False):
@@ -43,7 +41,6 @@ class Upscaler:
             os.makedirs(self.model_path, exist_ok=True)
 
         try:
-            import cv2
             self.can_tile = True
         except:
             pass
