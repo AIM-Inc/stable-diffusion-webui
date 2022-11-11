@@ -6,10 +6,9 @@ from PIL import Image
 from basicsr.utils.download_util import load_file_from_url
 
 import modules.esrgan_model_arch as arch
-from modules import shared, modelloader, images, devices
+from modules import modelloader, images, devices
 from modules.upscaler import Upscaler, UpscalerData
 from modules.shared import opts
-
 
 
 def mod2normal(state_dict):
@@ -80,6 +79,7 @@ def resrgan2normal(state_dict, nb=23):
         crt_net['model.10.weight'] = state_dict['conv_last.weight']
         crt_net['model.10.bias'] = state_dict['conv_last.bias']
         state_dict = crt_net
+
     return state_dict
 
 
@@ -191,8 +191,10 @@ def upscale_without_tiling(model, img):
     img = np.ascontiguousarray(np.transpose(img, (2, 0, 1))) / 255
     img = torch.from_numpy(img).float()
     img = devices.mps_contiguous_to(img.unsqueeze(0), devices.device_esrgan)
+
     with torch.no_grad():
         output = model(img)
+
     output = output.squeeze().float().cpu().clamp_(0, 1).numpy()
     output = 255. * np.moveaxis(output, 0, 2)
     output = output.astype(np.uint8)
@@ -221,4 +223,5 @@ def esrgan_upscale(model, img):
 
     newgrid = images.Grid(newtiles, grid.tile_w * scale_factor, grid.tile_h * scale_factor, grid.image_w * scale_factor, grid.image_h * scale_factor, grid.overlap * scale_factor)
     output = images.combine_grid(newgrid)
+
     return output
