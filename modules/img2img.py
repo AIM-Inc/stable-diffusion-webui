@@ -1,18 +1,12 @@
-import math
 import os
-import sys
-import traceback
 
-import numpy as np
 from PIL import Image, ImageOps, ImageChops
 
-from modules import devices
 from modules.processing import Processed, StableDiffusionProcessingImg2Img, process_images
 from modules.shared import opts, state
 import modules.shared as shared
 import modules.processing as processing
 from modules.ui import plaintext_to_html
-import modules.images as images
 import modules.scripts
 
 
@@ -40,7 +34,7 @@ def process_batch(p, input_dir, output_dir, args):
 
         img = Image.open(image)
         # Use the EXIF orientation of photos taken by smartphones.
-        img = ImageOps.exif_transpose(img) 
+        img = ImageOps.exif_transpose(img)
         p.init_images = [img] * p.batch_size
 
         proc = modules.scripts.scripts_img2img.run(p, *args)
@@ -80,7 +74,7 @@ def img2img(mode: int, prompt: str, negative_prompt: str, prompt_style: str, pro
         mask = None
 
     # Use the EXIF orientation of photos taken by smartphones.
-    image = ImageOps.exif_transpose(image) 
+    image = ImageOps.exif_transpose(image)
 
     assert 0. <= denoising_strength <= 1., 'can only work with strength in [0.0, 1.0]'
 
