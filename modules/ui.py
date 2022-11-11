@@ -2,7 +2,6 @@ import base64
 import html
 import io
 import json
-import math
 import mimetypes
 import os
 import platform
@@ -17,9 +16,6 @@ from functools import partial, reduce
 import gradio as gr
 import gradio.routes
 import gradio.utils
-import numpy as np
-import piexif
-import torch
 from PIL import Image, PngImagePlugin
 
 import gradio as gr
