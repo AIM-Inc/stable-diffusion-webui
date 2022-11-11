@@ -1,6 +1,4 @@
 # this code is adapted from the script contributed by anon from /h/
-
-import io
 import pickle
 import collections
 import sys
@@ -71,7 +69,6 @@ def check_zip_filenames(filename, names):
 
 def check_pt(filename):
     try:
-
         # new pytorch format is a zip file
         with zipfile.ZipFile(filename) as z:
             check_zip_filenames(filename, z.namelist())
@@ -81,7 +78,6 @@ def check_pt(filename):
                 unpickler.load()
 
     except zipfile.BadZipfile:
-
         # if it's not a zip file, it's an olf pytorch format, with five objects written to pickle
         with open(filename, "rb") as file:
             unpickler = RestrictedUnpickler(file)
