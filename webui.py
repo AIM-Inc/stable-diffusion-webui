@@ -27,7 +27,6 @@ import modules.txt2img
 import modules.ui
 from modules import devices
 from modules import modelloader
-from modules.paths import script_path
 from modules.shared import cmd_opts
 import modules.hypernetworks.hypernetwork
 
