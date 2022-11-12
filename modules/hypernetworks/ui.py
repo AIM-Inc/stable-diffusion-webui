@@ -1,6 +1,5 @@
 import html
 import os
-import re
 
 import gradio as gr
 import modules.textual_inversion.preprocess
@@ -9,6 +8,7 @@ from modules import devices, sd_hijack, shared
 from modules.hypernetworks import hypernetwork
 
 keys = list(hypernetwork.HypernetworkModule.activation_dict.keys())
+
 
 def create_hypernetwork(name, enable_sizes, overwrite_old, layer_structure=None, activation_func=None, weight_init=None, add_layer_norm=False, use_dropout=False):
     # Remove illegal characters from name.
@@ -60,4 +60,3 @@ Hypernetwork saved to {html.escape(filename)}
         shared.sd_model.cond_stage_model.to(devices.device)
         shared.sd_model.first_stage_model.to(devices.device)
         sd_hijack.apply_optimizations()
-
