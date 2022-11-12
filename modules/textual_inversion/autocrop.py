@@ -1,10 +1,8 @@
 import cv2
 import requests
 import os
-from collections import defaultdict
-from math import log, sqrt
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import ImageDraw
 
 GREEN = "#0F0"
 BLUE = "#00F"
@@ -88,7 +86,7 @@ def focal_point(im, settings):
     corner_centroid = None
     if len(corner_points) > 0:
       corner_centroid = centroid(corner_points)
-      corner_centroid.weight = settings.corner_points_weight / weight_pref_total 
+      corner_centroid.weight = settings.corner_points_weight / weight_pref_total
       pois.append(corner_centroid)
 
     entropy_centroid = None
@@ -100,7 +98,7 @@ def focal_point(im, settings):
     face_centroid = None
     if len(face_points) > 0:
       face_centroid = centroid(face_points)
-      face_centroid.weight = settings.face_points_weight / weight_pref_total 
+      face_centroid.weight = settings.face_points_weight / weight_pref_total
       pois.append(face_centroid)
 
     average_point = poi_average(pois, settings)
@@ -134,7 +132,7 @@ def focal_point(im, settings):
             d.rectangle(f.bounding(4), outline=color)
 
       d.ellipse(average_point.bounding(max_size), outline=GREEN)
-      
+
     return average_point
 
 
