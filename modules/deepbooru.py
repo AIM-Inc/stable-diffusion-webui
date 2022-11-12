@@ -1,10 +1,11 @@
 import os.path
-from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
 import time
 import re
 
 re_special = re.compile(r'([\\()])')
+OPT_INCLUDE_RANKS = "include_ranks"
+
 
 def get_deepbooru_tags(pil_image):
     """
@@ -19,7 +20,6 @@ def get_deepbooru_tags(pil_image):
         release_process()
 
 
-OPT_INCLUDE_RANKS = "include_ranks"
 def create_deepbooru_opts():
     from modules import shared
 
@@ -50,6 +50,7 @@ def create_deepbooru_process(threshold, deepbooru_opts):
     the tags.
     """
     from modules import shared  # prevents circular reference
+
     context = multiprocessing.get_context("spawn")
     shared.deepbooru_process_manager = context.Manager()
     shared.deepbooru_process_queue = shared.deepbooru_process_manager.Queue()
@@ -77,6 +78,7 @@ def release_process():
     Stops the deepbooru process to return used memory
     """
     from modules import shared  # prevents circular reference
+
     shared.deepbooru_process_queue.put("QUIT")
     shared.deepbooru_process.join()
     shared.deepbooru_process_queue = None
@@ -84,10 +86,10 @@ def release_process():
     shared.deepbooru_process_return = None
     shared.deepbooru_process_manager = None
 
+
 def get_deepbooru_tags_model():
     import deepdanbooru as dd
-    import tensorflow as tf
-    import numpy as np
+
     this_folder = os.path.dirname(__file__)
     model_path = os.path.abspath(os.path.join(this_folder, '..', 'models', 'deepbooru'))
     if not os.path.exists(os.path.join(model_path, 'project.json')):
