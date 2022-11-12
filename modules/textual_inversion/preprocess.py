@@ -1,20 +1,36 @@
 import os
 from PIL import Image, ImageOps
 import math
-import platform
-import sys
 import tqdm
-import time
 
 from modules import shared, images
 from modules.paths import models_path
 from modules.shared import opts, cmd_opts
 from modules.textual_inversion import autocrop
+
+
 if cmd_opts.deepdanbooru:
     import modules.deepbooru as deepbooru
 
 
-def preprocess(process_src, process_dst, process_width, process_height, preprocess_txt_action, process_flip, process_split, process_caption, process_caption_deepbooru=False, split_threshold=0.5, overlap_ratio=0.2, process_focal_crop=False, process_focal_crop_face_weight=0.9, process_focal_crop_entropy_weight=0.3, process_focal_crop_edges_weight=0.5, process_focal_crop_debug=False):
+def preprocess(
+    process_src,
+    process_dst,
+    process_width,
+    process_height,
+    preprocess_txt_action,
+    process_flip,
+    process_split,
+    process_caption,
+    process_caption_deepbooru=False,
+    split_threshold=0.5,
+    overlap_ratio=0.2,
+    process_focal_crop=False,
+    process_focal_crop_face_weight=0.9,
+    process_focal_crop_entropy_weight=0.3,
+    process_focal_crop_edges_weight=0.5,
+    process_focal_crop_debug=False
+):
     try:
         if process_caption:
             shared.interrogator.load()
@@ -24,10 +40,25 @@ def preprocess(process_src, process_dst, process_width, process_height, preproce
             db_opts[deepbooru.OPT_INCLUDE_RANKS] = False
             deepbooru.create_deepbooru_process(opts.interrogate_deepbooru_score_threshold, db_opts)
 
-        preprocess_work(process_src, process_dst, process_width, process_height, preprocess_txt_action, process_flip, process_split, process_caption, process_caption_deepbooru, split_threshold, overlap_ratio, process_focal_crop, process_focal_crop_face_weight, process_focal_crop_entropy_weight, process_focal_crop_edges_weight, process_focal_crop_debug)
-
+        preprocess_work(
+            process_src,
+            process_dst,
+            process_width,
+            process_height,
+            preprocess_txt_action,
+            process_flip,
+            process_split,
+            process_caption,
+            process_caption_deepbooru,
+            split_threshold,
+            overlap_ratio,
+            process_focal_crop,
+            process_focal_crop_face_weight,
+            process_focal_crop_entropy_weight,
+            process_focal_crop_edges_weight,
+            process_focal_crop_debug
+        )
     finally:
-
         if process_caption:
             shared.interrogator.send_blip_to_ram()
 
@@ -35,8 +66,24 @@ def preprocess(process_src, process_dst, process_width, process_height, preproce
             deepbooru.release_process()
 
 
-
-def preprocess_work(process_src, process_dst, process_width, process_height, preprocess_txt_action, process_flip, process_split, process_caption, process_caption_deepbooru=False, split_threshold=0.5, overlap_ratio=0.2, process_focal_crop=False, process_focal_crop_face_weight=0.9, process_focal_crop_entropy_weight=0.3, process_focal_crop_edges_weight=0.5, process_focal_crop_debug=False):
+def preprocess_work(
+    process_src,
+    process_dst,
+    process_width,
+    process_height,
+    preprocess_txt_action,
+    process_flip,
+    process_split,
+    process_caption,
+    process_caption_deepbooru=False,
+    split_threshold=0.5,
+    overlap_ratio=0.2,
+    process_focal_crop=False,
+    process_focal_crop_face_weight=0.9,
+    process_focal_crop_entropy_weight=0.3,
+    process_focal_crop_edges_weight=0.5,
+    process_focal_crop_debug=False
+):
     width = process_width
     height = process_height
     src = os.path.abspath(process_src)
@@ -79,7 +126,7 @@ def preprocess_work(process_src, process_dst, process_width, process_height, pre
             caption = existing_caption
 
         caption = caption.strip()
-        
+
         if len(caption) > 0:
             with open(os.path.join(dst, f"{basename}.txt"), "w", encoding="utf8") as file:
                 file.write(caption)
@@ -107,6 +154,7 @@ def preprocess_work(process_src, process_dst, process_width, process_height, pre
 
         split_count = math.ceil((h - to_h * overlap_ratio) / (to_h * (1.0 - overlap_ratio)))
         y_step = (h - to_h) / (split_count - 1)
+
         for i in range(split_count):
             y = int(y_step * i)
             if inverse_xy:
@@ -114,7 +162,6 @@ def preprocess_work(process_src, process_dst, process_width, process_height, pre
             else:
                 splitted = image.crop((0, y, to_w, y + to_h))
             yield splitted
-
 
     for index, imagefile in enumerate(tqdm.tqdm(files)):
         subindex = [0]
@@ -126,6 +173,7 @@ def preprocess_work(process_src, process_dst, process_width, process_height, pre
 
         existing_caption = None
         existing_caption_filename = os.path.splitext(filename)[0] + '.txt'
+
         if os.path.exists(existing_caption_filename):
             with open(existing_caption_filename, 'r', encoding="utf8") as file:
                 existing_caption = file.read()
@@ -164,8 +212,10 @@ def preprocess_work(process_src, process_dst, process_width, process_height, pre
                 annotate_image = process_focal_crop_debug,
                 dnn_model_path = dnn_model_path,
             )
+
             for focal in autocrop.crop_image(img, autocrop_settings):
                 save_pic(focal, index, existing_caption=existing_caption)
+
             process_default_resize = False
 
         if process_default_resize:
