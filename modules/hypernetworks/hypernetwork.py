@@ -1,4 +1,3 @@
-import csv
 import datetime
 import glob
 import html
@@ -396,7 +395,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
         if len(loss_dict) > 0:
             previous_mean_losses = [i[-1] for i in loss_dict.values()]
             previous_mean_loss = mean(previous_mean_losses)
-            
+
         scheduler.apply(optimizer, hypernetwork.step)
         if scheduler.finished:
             break
@@ -415,7 +414,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
             losses[hypernetwork.step % losses.shape[0]] = loss.item()
             for entry in entries:
                 loss_dict[entry.filename].append(loss.item())
-                
+
             optimizer.zero_grad()
             weights[0].grad = None
             loss.backward()
@@ -430,7 +429,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
         if torch.isnan(losses[hypernetwork.step % losses.shape[0]]):
             raise RuntimeError("Loss diverged.")
-        
+
         if len(previous_mean_losses) > 1:
             std = stdev(previous_mean_losses)
         else:
@@ -501,7 +500,7 @@ Last saved hypernetwork: {html.escape(last_saved_file)}<br/>
 Last saved image: {html.escape(last_saved_image)}<br/>
 </p>
 """
-        
+
     report_statistics(loss_dict)
     checkpoint = sd_models.select_checkpoint()
 
