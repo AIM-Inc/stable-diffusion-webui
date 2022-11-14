@@ -6,8 +6,7 @@ const handleData = ($component) => {
     if (json != null) {
       const image_data = JSON.parse(json);
 
-      image_data.forEach((_data, index) => {
-        galleryData.set(`seed-${_data[`seed-${index}`]}-index-${index}`, _data);
+      image_data.forEach((_data) => {
         addImageScore(_data);
       });
 
@@ -23,7 +22,7 @@ const addImageScore = (data) => {
     "#txt2img_gallery .gallery-item"
   );
 
-  $galleryImages.forEach((img, index) => {
+  $galleryImages.forEach((img) => {
     const $div = document.createElement("div");
     $div.classList.add("caption");
     $div.innerHTML = `Score: ${data.score}`;
