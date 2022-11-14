@@ -1,6 +1,5 @@
-from array import array
 from inflection import underscore
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field, create_model
 from modules.processing import StableDiffusionProcessingTxt2Img, StableDiffusionProcessingImg2Img
 import inspect
@@ -23,6 +22,7 @@ API_NOT_ALLOWED = [
     "sampler_noise_scheduler_override",
     "ddim_discretize"
 ]
+
 
 class ModelDef(BaseModel):
     """Assistance Class for Pydantic Dynamic Model Generation"""
@@ -51,17 +51,16 @@ class PydanticModelGenerator:
             # field_type = str if not overrides.get(k) else overrides[k]["type"]
             # print(k, v.annotation, v.default)
             field_type = v.annotation
-            
+
             return Optional[field_type]
-        
+
         def merge_class_params(class_):
             all_classes = list(filter(lambda x: x is not object, inspect.getmro(class_)))
             parameters = {}
             for classes in all_classes:
                 parameters = {**parameters, **inspect.signature(classes.__init__).parameters}
             return parameters
-            
-                
+
         self._model_name = model_name
         self._class_data = merge_class_params(class_instance)
         self._model_def = [
@@ -73,11 +72,11 @@ class PydanticModelGenerator:
             )
             for (k,v) in self._class_data.items() if k not in API_NOT_ALLOWED
         ]
-        
+
         for fields in additional_fields:
             self._model_def.append(ModelDef(
-                field=underscore(fields["key"]), 
-                field_alias=fields["key"], 
+                field=underscore(fields["key"]),
+                field_alias=fields["key"],
                 field_type=fields["type"],
                 field_value=fields["default"],
                 field_exclude=fields["exclude"] if "exclude" in fields else False))
@@ -94,15 +93,16 @@ class PydanticModelGenerator:
         DynamicModel.__config__.allow_population_by_field_name = True
         DynamicModel.__config__.allow_mutation = True
         return DynamicModel
-    
+
+
 StableDiffusionTxt2ImgProcessingAPI = PydanticModelGenerator(
-    "StableDiffusionProcessingTxt2Img", 
+    "StableDiffusionProcessingTxt2Img",
     StableDiffusionProcessingTxt2Img,
     [{"key": "sampler_index", "type": str, "default": "Euler"}]
 ).generate_model()
 
 StableDiffusionImg2ImgProcessingAPI = PydanticModelGenerator(
-    "StableDiffusionProcessingImg2Img", 
+    "StableDiffusionProcessingImg2Img",
     StableDiffusionProcessingImg2Img,
     [{"key": "sampler_index", "type": str, "default": "Euler"}, {"key": "init_images", "type": list, "default": None}, {"key": "denoising_strength", "type": float, "default": 0.75}, {"key": "mask", "type": str, "default": None}, {"key": "include_init_images", "type": bool, "default": False, "exclude" : True}]
 ).generate_model()
