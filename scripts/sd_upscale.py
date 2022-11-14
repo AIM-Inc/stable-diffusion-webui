@@ -4,9 +4,9 @@ import modules.scripts as scripts
 import gradio as gr
 from PIL import Image
 
-from modules import processing, shared, sd_samplers, images, devices
+from modules import processing, shared, images, devices
 from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state
+from modules.shared import opts, state
 
 
 class Script(scripts.Script):
@@ -34,8 +34,8 @@ class Script(scripts.Script):
         seed = p.seed
 
         init_img = p.init_images[0]
-        
-        if(upscaler.name != "None"): 
+
+        if(upscaler.name != "None"):
             img = upscaler.scaler.upscale(init_img, 2, upscaler.data_path)
         else:
             img = init_img

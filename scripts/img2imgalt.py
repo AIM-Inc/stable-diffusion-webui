@@ -6,16 +6,10 @@ from tqdm import trange
 import modules.scripts as scripts
 import gradio as gr
 
-from modules import processing, shared, sd_samplers, prompt_parser
-from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state
+from modules import processing, shared, sd_samplers
 
 import torch
 import k_diffusion as K
-
-from PIL import Image
-from torch import autocast
-from einops import rearrange, repeat
 
 
 def find_noise_for_image(p, cond, uncond, cfg_scale, steps):
@@ -146,9 +140,9 @@ class Script(scripts.Script):
         sigma_adjustment = gr.Checkbox(label="Sigma adjustment for finding noise for image", value=False)
 
         return [
-            info, 
+            info,
             override_sampler,
-            override_prompt, original_prompt, original_negative_prompt, 
+            override_prompt, original_prompt, original_negative_prompt,
             override_steps, st,
             override_strength,
             cfg, randomness, sigma_adjustment,
@@ -189,17 +183,17 @@ class Script(scripts.Script):
                 self.cache = Cached(rec_noise, cfg, st, lat, original_prompt, original_negative_prompt, sigma_adjustment)
 
             rand_noise = processing.create_random_tensors(p.init_latent.shape[1:], seeds=seeds, subseeds=subseeds, subseed_strength=p.subseed_strength, seed_resize_from_h=p.seed_resize_from_h, seed_resize_from_w=p.seed_resize_from_w, p=p)
-            
+
             combined_noise = ((1 - randomness) * rec_noise + randomness * rand_noise) / ((randomness**2 + (1-randomness)**2) ** 0.5)
-            
+
             sampler = sd_samplers.create_sampler_with_index(sd_samplers.samplers, p.sampler_index, p.sd_model)
 
             sigmas = sampler.model_wrap.get_sigmas(p.steps)
-            
+
             noise_dt = combined_noise - (p.init_latent / sigmas[0])
-            
+
             p.seed = p.seed + 1
-            
+
             return sampler.sample_img2img(p, p.init_latent, noise_dt, conditioning, unconditional_conditioning, image_conditioning=p.image_conditioning)
 
         p.sample = sample_extra
@@ -214,4 +208,3 @@ class Script(scripts.Script):
         processed = processing.process_images(p)
 
         return processed
-

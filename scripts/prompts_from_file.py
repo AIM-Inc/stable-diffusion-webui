@@ -1,6 +1,4 @@
 import copy
-import math
-import os
 import random
 import sys
 import traceback
@@ -10,8 +8,7 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules.processing import Processed, process_images
-from PIL import Image
-from modules.shared import opts, cmd_opts, state
+from modules.shared import state
 
 
 def process_string_tag(tag):
@@ -90,6 +87,7 @@ def load_prompt_file(file):
 
     return None, "\n".join(lines), gr.update(lines=7)
 
+
 class Script(scripts.Script):
     def title(self):
         return "Prompts from file or textbox"
@@ -152,7 +150,7 @@ class Script(scripts.Script):
 
             proc = process_images(copy_p)
             images += proc.images
-            
+
             if (checkbox_iterate):
                 p.seed = p.seed + (p.batch_size * p.n_iter)
 

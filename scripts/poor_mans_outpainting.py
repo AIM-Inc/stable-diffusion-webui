@@ -4,10 +4,9 @@ import modules.scripts as scripts
 import gradio as gr
 from PIL import Image, ImageDraw
 
-from modules import images, processing, devices
+from modules import images, devices
 from modules.processing import Processed, process_images
-from modules.shared import opts, cmd_opts, state
-
+from modules.shared import opts, state
 
 
 class Script(scripts.Script):
@@ -144,4 +143,3 @@ class Script(scripts.Script):
         processed = Processed(p, [combined_image], initial_seed, initial_info)
 
         return processed
-

@@ -2,13 +2,13 @@ import modules.scripts as scripts
 import gradio as gr
 
 from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state
+from modules.shared import cmd_opts
+
 
 class Script(scripts.Script):
 
     def title(self):
         return "Custom code"
-
 
     def show(self, is_img2img):
         return cmd_opts.allow_code
@@ -38,5 +38,3 @@ class Script(scripts.Script):
         exec(compiled, module.__dict__)
 
         return Processed(p, *display_result_data)
-    
-    
