@@ -106,7 +106,7 @@ The [ui-config.json](ui-config.json) is used to configure all of the settings fo
 Hard coded default values have been changed in the following components according to the needs of AIMC:
 
 - [scripts/loopback.py](scripts/loopback.py)  
-  - [loopback slider]() max value is now set to `100000`
+  - [loopback slider](https://github.com/AIM-Inc/stable-diffusion-webui/blob/e4e9f83f3754443a21facc2bf8e56a9aba420eaa/scripts/loopback.py#L20) max value is now set to `100000`
 
 ## Features
 
