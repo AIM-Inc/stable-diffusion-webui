@@ -100,9 +100,8 @@ conda activate web-ui
 
 ## Config
 
-The `ui-config.json` is used to configure all of the settings for the ui including the limits of the components/elements (min/max values). If this file is not present the limits are hard coded to a default value that is in the python code and written to the `ui-config.json` file.
- 
-This file lives at the root of the the project. Configuration files like `ui-config.json` are not included in the repository, and are excluded using the [.gitignore](.gitignore) file. 
+The `ui-config.json` is used to configure all of the settings for the ui including the limits of the components/elements (min/max values). If this file is not present the limits are hard coded to a default value that is in the python code and written to the `ui-config.json` file at the root of the project.
+Configuration files like `ui-config.json` are not included in the repository, and are excluded using the [.gitignore](.gitignore) file. 
 
 Updates to the defaults should been done instead to add greater limits that we can then temper with the [ui-config.json](ui-config.json).
 
