@@ -23,9 +23,9 @@ from modules.textual_inversion.image_embedding import (embedding_to_b64, embeddi
 class Embedding:
     def __init__(self, vec, name, step=None, dir_path="embeddings_config.json"):
         try:
-            self.dir = json.load(dir_path)
+            self.dirs = json.load(dir_path)
         except Exception:
-            self.dir = None
+            self.dirs = None
         self.vec = vec
         self.name = name
         self.step = step
