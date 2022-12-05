@@ -29,3 +29,4 @@ inflection
 fastapi
 psutil
 gdown
+black==22.10.0
