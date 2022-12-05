@@ -44,7 +44,7 @@ class Script:
          - False if the script should not be shown in UI at all
          - True if the script should be shown in UI if it's scelected in the scripts drowpdown
          - script.AlwaysVisible if the script should be shown in UI at all times
-         """
+        """
 
         return True
 
@@ -96,7 +96,9 @@ def list_scripts(scriptdirname, extension):
     basedir = os.path.join(paths.script_path, scriptdirname)
     if os.path.exists(basedir):
         for filename in sorted(os.listdir(basedir)):
-            scripts_list.append(ScriptFile(paths.script_path, filename, os.path.join(basedir, filename)))
+            scripts_list.append(
+                ScriptFile(paths.script_path, filename, os.path.join(basedir, filename))
+            )
 
     extdir = os.path.join(paths.script_path, "extensions")
     if os.path.exists(extdir):
@@ -108,9 +110,15 @@ def list_scripts(scriptdirname, extension):
                 continue
 
             for filename in sorted(os.listdir(scriptdirpath)):
-                scripts_list.append(ScriptFile(dirpath, filename, os.path.join(scriptdirpath, filename)))
+                scripts_list.append(
+                    ScriptFile(dirpath, filename, os.path.join(scriptdirpath, filename))
+                )
 
-    scripts_list = [x for x in scripts_list if os.path.splitext(x.path)[1].lower() == extension and os.path.isfile(x.path)]
+    scripts_list = [
+        x
+        for x in scripts_list
+        if os.path.splitext(x.path)[1].lower() == extension and os.path.isfile(x.path)
+    ]
 
     return scripts_list
 
@@ -154,13 +162,18 @@ def load_scripts():
                 text = file.read()
 
             from types import ModuleType
-            compiled = compile(text, scriptfile.path, 'exec')
+
+            compiled = compile(text, scriptfile.path, "exec")
             module = ModuleType(scriptfile.filename)
             exec(compiled, module.__dict__)
 
             for key, script_class in module.__dict__.items():
                 if type(script_class) == type and issubclass(script_class, Script):
-                    scripts_data.append(ScriptClassData(script_class, scriptfile.path, scriptfile.basedir))
+                    scripts_data.append(
+                        ScriptClassData(
+                            script_class, scriptfile.path, scriptfile.basedir
+                        )
+                    )
 
         except Exception:
             print(f"Error loading script: {scriptfile.filename}", file=sys.stderr)
@@ -206,7 +219,11 @@ class ScriptRunner:
                 self.scripts.append(script)
                 self.selectable_scripts.append(script)
 
-        self.titles = [wrap_call(script.title, script.filename, "title") or f"{script.filename} [error]" for script in self.selectable_scripts]
+        self.titles = [
+            wrap_call(script.title, script.filename, "title")
+            or f"{script.filename} [error]"
+            for script in self.selectable_scripts
+        ]
 
         inputs = [None]
         inputs_alwayson = [True]
@@ -236,7 +253,9 @@ class ScriptRunner:
             with gr.Group():
                 create_script_ui(script, inputs, inputs_alwayson)
 
-        dropdown = gr.Dropdown(label="Script", choices=["None"] + self.titles, value="None", type="index")
+        dropdown = gr.Dropdown(
+            label="Script", choices=["None"] + self.titles, value="None", type="index"
+        )
         dropdown.save_to_config = True
         inputs[0] = dropdown
 
@@ -245,17 +264,20 @@ class ScriptRunner:
 
         def select_script(script_index):
             if 0 < script_index <= len(self.selectable_scripts):
-                script = self.selectable_scripts[script_index-1]
+                script = self.selectable_scripts[script_index - 1]
                 args_from = script.args_from
                 args_to = script.args_to
             else:
                 args_from = 0
                 args_to = 0
 
-            return [ui.gr_show(True if i == 0 else args_from <= i < args_to or is_alwayson) for i, is_alwayson in enumerate(inputs_alwayson)]
+            return [
+                ui.gr_show(True if i == 0 else args_from <= i < args_to or is_alwayson)
+                for i, is_alwayson in enumerate(inputs_alwayson)
+            ]
 
         def init_field(title):
-            if title == 'None':
+            if title == "None":
                 return
             script_index = self.titles.index(title)
             script = self.selectable_scripts[script_index]
@@ -263,11 +285,7 @@ class ScriptRunner:
                 inputs[i].visible = True
 
         dropdown.init_field = init_field
-        dropdown.change(
-            fn=select_script,
-            inputs=[dropdown],
-            outputs=inputs
-        )
+        dropdown.change(fn=select_script, inputs=[dropdown], outputs=inputs)
 
         return inputs
 
@@ -277,12 +295,12 @@ class ScriptRunner:
         if script_index == 0:
             return None
 
-        script = self.selectable_scripts[script_index-1]
+        script = self.selectable_scripts[script_index - 1]
 
         if script is None:
             return None
 
-        script_args = args[script.args_from:script.args_to]
+        script_args = args[script.args_from : script.args_to]
         processed = script.run(p, *script_args)
 
         shared.total_tqdm.clear()
@@ -292,10 +310,12 @@ class ScriptRunner:
     def run_alwayson_scripts(self, p):
         for script in self.alwayson_scripts:
             try:
-                script_args = p.script_args[script.args_from:script.args_to]
+                script_args = p.script_args[script.args_from : script.args_to]
                 script.process(p, *script_args)
             except Exception:
-                print(f"Error running alwayson script: {script.filename}", file=sys.stderr)
+                print(
+                    f"Error running alwayson script: {script.filename}", file=sys.stderr
+                )
                 print(traceback.format_exc(), file=sys.stderr)
 
     def reload_sources(self, cache):
@@ -310,7 +330,7 @@ class ScriptRunner:
 
                 module = cache.get(filename, None)
                 if module is None:
-                    compiled = compile(text, filename, 'exec')
+                    compiled = compile(text, filename, "exec")
                     module = ModuleType(script.filename)
                     exec(compiled, module.__dict__)
                     cache[filename] = module
@@ -340,4 +360,3 @@ def reload_scripts():
 
     scripts_txt2img = ScriptRunner()
     scripts_img2img = ScriptRunner()
-

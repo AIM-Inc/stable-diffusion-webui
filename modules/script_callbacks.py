@@ -45,17 +45,17 @@ def model_loaded_callback(sd_model):
         try:
             c.callback(sd_model)
         except Exception:
-            report_exception(c, 'model_loaded_callback')
+            report_exception(c, "model_loaded_callback")
 
 
 def ui_tabs_callback():
     res = []
-    
+
     for c in callbacks_ui_tabs:
         try:
             res += c.callback() or []
         except Exception:
-            report_exception(c, 'ui_tabs_callback')
+            report_exception(c, "ui_tabs_callback")
 
     return res
 
@@ -65,7 +65,7 @@ def ui_settings_callback():
         try:
             c.callback()
         except Exception:
-            report_exception(c, 'ui_settings_callback')
+            report_exception(c, "ui_settings_callback")
 
 
 def before_image_saved_callback(params: ImageSaveParams):
@@ -73,7 +73,7 @@ def before_image_saved_callback(params: ImageSaveParams):
         try:
             c.callback(params)
         except Exception:
-            report_exception(c, 'before_image_saved_callback')
+            report_exception(c, "before_image_saved_callback")
 
 
 def image_saved_callback(params: ImageSaveParams):
@@ -81,12 +81,12 @@ def image_saved_callback(params: ImageSaveParams):
         try:
             c.callback(params)
         except Exception:
-            report_exception(c, 'image_saved_callback')
+            report_exception(c, "image_saved_callback")
 
 
 def add_callback(callbacks, fun):
     stack = [x for x in inspect.stack() if x.filename != __file__]
-    filename = stack[0].filename if len(stack) > 0 else 'unknown file'
+    filename = stack[0].filename if len(stack) > 0 else "unknown file"
 
     callbacks.append(ScriptCallback(filename, fun))
 
@@ -112,7 +112,7 @@ def on_ui_tabs(callback):
 
 def on_ui_settings(callback):
     """register a function to be called before UI settings are populated; add your settings
-    by using shared.opts.add_option(shared.OptionInfo(...)) """
+    by using shared.opts.add_option(shared.OptionInfo(...))"""
     add_callback(callbacks_ui_settings, callback)
 
 

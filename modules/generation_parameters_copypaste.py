@@ -12,23 +12,24 @@ type_of_gr_update = type(gr.update())
 
 
 def quote(text):
-    if ',' not in str(text):
+    if "," not in str(text):
         return text
 
     text = str(text)
-    text = text.replace('\\', '\\\\')
+    text = text.replace("\\", "\\\\")
     text = text.replace('"', '\\"')
     return f'"{text}"'
 
+
 def parse_generation_parameters(x: str):
     """parses generation parameters string, the one you see in text field under the picture in UI:
-```
-girl with an artist's beret, determined, blue eyes, desert scene, computer monitors, heavy makeup, by Alphonse Mucha and Charlie Bowater, ((eyeshadow)), (coquettish), detailed, intricate
-Negative prompt: ugly, fat, obese, chubby, (((deformed))), [blurry], bad anatomy, disfigured, poorly drawn face, mutation, mutated, (extra_limb), (ugly), (poorly drawn hands), messy drawing
-Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model hash: 45dee52b
-```
+    ```
+    girl with an artist's beret, determined, blue eyes, desert scene, computer monitors, heavy makeup, by Alphonse Mucha and Charlie Bowater, ((eyeshadow)), (coquettish), detailed, intricate
+    Negative prompt: ugly, fat, obese, chubby, (((deformed))), [blurry], bad anatomy, disfigured, poorly drawn face, mutation, mutated, (extra_limb), (ugly), (poorly drawn hands), messy drawing
+    Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model hash: 45dee52b
+    ```
 
-    returns a dict with field values
+        returns a dict with field values
     """
 
     res = {}
@@ -41,7 +42,7 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
     *lines, lastline = x.strip().split("\n")
     if not re_params.match(lastline):
         lines.append(lastline)
-        lastline = ''
+        lastline = ""
 
     for i, line in enumerate(lines):
         line = line.strip()
@@ -60,8 +61,8 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 965400086, Size: 512x512, Model
     for k, v in re_param.findall(lastline):
         m = re_imagesize.match(v)
         if m is not None:
-            res[k+"-1"] = m.group(1)
-            res[k+"-2"] = m.group(2)
+            res[k + "-1"] = m.group(1)
+            res[k + "-2"] = m.group(2)
         else:
             res[k] = v
 

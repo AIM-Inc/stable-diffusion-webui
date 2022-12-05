@@ -29,7 +29,7 @@ def txt2img(
     denoising_strength: float,
     firstphase_width: int,
     firstphase_height: int,
-    *args
+    *args,
 ):
     p = StableDiffusionProcessingTxt2Img(
         sd_model=shared.sd_model,

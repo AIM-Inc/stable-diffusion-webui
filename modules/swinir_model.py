@@ -21,9 +21,11 @@ precision_scope = (
 class UpscalerSwinIR(Upscaler):
     def __init__(self, dirname):
         self.name = "SwinIR"
-        self.model_url = "https://github.com/JingyunLiang/SwinIR/releases/download/v0.0" \
-                         "/003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR" \
-                         "-L_x4_GAN.pth "
+        self.model_url = (
+            "https://github.com/JingyunLiang/SwinIR/releases/download/v0.0"
+            "/003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR"
+            "-L_x4_GAN.pth "
+        )
         self.model_name = "SwinIR 4x"
         self.user_path = dirname
         super().__init__()
@@ -53,24 +55,26 @@ class UpscalerSwinIR(Upscaler):
     def load_model(self, path, scale=4):
         if "http" in path:
             dl_name = "%s%s" % (self.model_name.replace(" ", "_"), ".pth")
-            filename = load_file_from_url(url=path, model_dir=self.model_path, file_name=dl_name, progress=True)
+            filename = load_file_from_url(
+                url=path, model_dir=self.model_path, file_name=dl_name, progress=True
+            )
         else:
             filename = path
         if filename is None or not os.path.exists(filename):
             return None
         if filename.endswith(".v2.pth"):
             model = net2(
-            upscale=scale,
-            in_chans=3,
-            img_size=64,
-            window_size=8,
-            img_range=1.0,
-            depths=[6, 6, 6, 6, 6, 6],
-            embed_dim=180,
-            num_heads=[6, 6, 6, 6, 6, 6],
-            mlp_ratio=2,
-            upsampler="nearest+conv",
-            resi_connection="1conv",
+                upscale=scale,
+                in_chans=3,
+                img_size=64,
+                window_size=8,
+                img_range=1.0,
+                depths=[6, 6, 6, 6, 6, 6],
+                embed_dim=180,
+                num_heads=[6, 6, 6, 6, 6, 6],
+                mlp_ratio=2,
+                upsampler="nearest+conv",
+                resi_connection="1conv",
             )
             params = None
         else:
@@ -100,12 +104,12 @@ class UpscalerSwinIR(Upscaler):
 
 
 def upscale(
-        img,
-        model,
-        tile=opts.SWIN_tile,
-        tile_overlap=opts.SWIN_tile_overlap,
-        window_size=8,
-        scale=4,
+    img,
+    model,
+    tile=opts.SWIN_tile,
+    tile_overlap=opts.SWIN_tile_overlap,
+    window_size=8,
+    scale=4,
 ):
     img = np.array(img)
     img = img[:, :, ::-1]
@@ -139,21 +143,27 @@ def inference(img, model, tile, tile_overlap, window_size, scale):
     stride = tile - tile_overlap
     h_idx_list = list(range(0, h - tile, stride)) + [h - tile]
     w_idx_list = list(range(0, w - tile, stride)) + [w - tile]
-    E = torch.zeros(b, c, h * sf, w * sf, dtype=torch.half, device=devices.device_swinir).type_as(img)
+    E = torch.zeros(
+        b, c, h * sf, w * sf, dtype=torch.half, device=devices.device_swinir
+    ).type_as(img)
     W = torch.zeros_like(E, dtype=torch.half, device=devices.device_swinir)
 
     with tqdm(total=len(h_idx_list) * len(w_idx_list), desc="SwinIR tiles") as pbar:
         for h_idx in h_idx_list:
             for w_idx in w_idx_list:
-                in_patch = img[..., h_idx: h_idx + tile, w_idx: w_idx + tile]
+                in_patch = img[..., h_idx : h_idx + tile, w_idx : w_idx + tile]
                 out_patch = model(in_patch)
                 out_patch_mask = torch.ones_like(out_patch)
 
                 E[
-                ..., h_idx * sf: (h_idx + tile) * sf, w_idx * sf: (w_idx + tile) * sf
+                    ...,
+                    h_idx * sf : (h_idx + tile) * sf,
+                    w_idx * sf : (w_idx + tile) * sf,
                 ].add_(out_patch)
                 W[
-                ..., h_idx * sf: (h_idx + tile) * sf, w_idx * sf: (w_idx + tile) * sf
+                    ...,
+                    h_idx * sf : (h_idx + tile) * sf,
+                    w_idx * sf : (w_idx + tile) * sf,
                 ].add_(out_patch_mask)
                 pbar.update(1)
     output = E.div_(W)

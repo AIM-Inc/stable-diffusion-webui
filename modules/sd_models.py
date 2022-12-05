@@ -14,13 +14,16 @@ from modules.sd_hijack_inpainting import do_inpainting_hijack, should_hijack_inp
 model_dir = "Stable-diffusion"
 model_path = os.path.abspath(os.path.join(models_path, model_dir))
 
-CheckpointInfo = namedtuple("CheckpointInfo", ['filename', 'title', 'hash', 'model_name', 'config'])
+CheckpointInfo = namedtuple(
+    "CheckpointInfo", ["filename", "title", "hash", "model_name", "config"]
+)
 checkpoints_list = {}
 checkpoints_loaded = collections.OrderedDict()
 
 try:
     # this silences the annoying "Some weights of the model checkpoint were not used when initializing..." message at start.
     from transformers import logging
+
     logging.set_verbosity_error()
 except Exception:
     pass
@@ -39,15 +42,21 @@ def checkpoint_tiles():
 
 def list_models():
     checkpoints_list.clear()
-    model_list = modelloader.load_models(model_path=model_path, command_path=shared.cmd_opts.ckpt_dir, ext_filter=[".ckpt"])
+    model_list = modelloader.load_models(
+        model_path=model_path,
+        command_path=shared.cmd_opts.ckpt_dir,
+        ext_filter=[".ckpt"],
+    )
 
     def modeltitle(path, shorthash):
         abspath = os.path.abspath(path)
 
-        if shared.cmd_opts.ckpt_dir is not None and abspath.startswith(shared.cmd_opts.ckpt_dir):
-            name = abspath.replace(shared.cmd_opts.ckpt_dir, '')
+        if shared.cmd_opts.ckpt_dir is not None and abspath.startswith(
+            shared.cmd_opts.ckpt_dir
+        ):
+            name = abspath.replace(shared.cmd_opts.ckpt_dir, "")
         elif abspath.startswith(model_path):
-            name = abspath.replace(model_path, '')
+            name = abspath.replace(model_path, "")
         else:
             name = os.path.basename(path)
 
@@ -56,16 +65,21 @@ def list_models():
 
         shortname = os.path.splitext(name.replace("/", "_").replace("\\", "_"))[0]
 
-        return f'{name} [{shorthash}]', shortname
+        return f"{name} [{shorthash}]", shortname
 
     cmd_ckpt = shared.cmd_opts.ckpt
     if os.path.exists(cmd_ckpt):
         h = model_hash(cmd_ckpt)
         title, short_model_name = modeltitle(cmd_ckpt, h)
-        checkpoints_list[title] = CheckpointInfo(cmd_ckpt, title, h, short_model_name, shared.cmd_opts.config)
-        shared.opts.data['sd_model_checkpoint'] = title
+        checkpoints_list[title] = CheckpointInfo(
+            cmd_ckpt, title, h, short_model_name, shared.cmd_opts.config
+        )
+        shared.opts.data["sd_model_checkpoint"] = title
     elif cmd_ckpt is not None and cmd_ckpt != shared.default_sd_model_file:
-        print(f"Checkpoint in --ckpt argument not found (Possible it was moved to {model_path}: {cmd_ckpt}", file=sys.stderr)
+        print(
+            f"Checkpoint in --ckpt argument not found (Possible it was moved to {model_path}: {cmd_ckpt}",
+            file=sys.stderr,
+        )
     for filename in model_list:
         h = model_hash(filename)
         title, short_model_name = modeltitle(filename, h)
@@ -75,11 +89,16 @@ def list_models():
         if not os.path.exists(config):
             config = shared.cmd_opts.config
 
-        checkpoints_list[title] = CheckpointInfo(filename, title, h, short_model_name, config)
+        checkpoints_list[title] = CheckpointInfo(
+            filename, title, h, short_model_name, config
+        )
 
 
 def get_closet_checkpoint_match(searchString):
-    applicable = sorted([info for info in checkpoints_list.values() if searchString in info.title], key = lambda x:len(x.title))
+    applicable = sorted(
+        [info for info in checkpoints_list.values() if searchString in info.title],
+        key=lambda x: len(x.title),
+    )
     if len(applicable) > 0:
         return applicable[0]
     return None
@@ -89,13 +108,14 @@ def model_hash(filename):
     try:
         with open(filename, "rb") as file:
             import hashlib
+
             m = hashlib.sha256()
 
             file.seek(0x100000)
             m.update(file.read(0x10000))
             return m.hexdigest()[0:8]
     except FileNotFoundError:
-        return 'NOFILE'
+        return "NOFILE"
 
 
 def select_checkpoint():
@@ -105,33 +125,45 @@ def select_checkpoint():
         return checkpoint_info
 
     if len(checkpoints_list) == 0:
-        print(f"No checkpoints found. When searching for checkpoints, looked at:", file=sys.stderr)
+        print(
+            f"No checkpoints found. When searching for checkpoints, looked at:",
+            file=sys.stderr,
+        )
         if shared.cmd_opts.ckpt is not None:
             print(f" - file {os.path.abspath(shared.cmd_opts.ckpt)}", file=sys.stderr)
         print(f" - directory {model_path}", file=sys.stderr)
         if shared.cmd_opts.ckpt_dir is not None:
-            print(f" - directory {os.path.abspath(shared.cmd_opts.ckpt_dir)}", file=sys.stderr)
-        print(f"Can't run without a checkpoint. Find and place a .ckpt file into any of those locations. The program will exit.", file=sys.stderr)
+            print(
+                f" - directory {os.path.abspath(shared.cmd_opts.ckpt_dir)}",
+                file=sys.stderr,
+            )
+        print(
+            f"Can't run without a checkpoint. Find and place a .ckpt file into any of those locations. The program will exit.",
+            file=sys.stderr,
+        )
         exit(1)
 
     checkpoint_info = next(iter(checkpoints_list.values()))
     if model_checkpoint is not None:
-        print(f"Checkpoint {model_checkpoint} not found; loading fallback {checkpoint_info.title}", file=sys.stderr)
+        print(
+            f"Checkpoint {model_checkpoint} not found; loading fallback {checkpoint_info.title}",
+            file=sys.stderr,
+        )
 
     return checkpoint_info
 
 
 chckpoint_dict_replacements = {
-    'cond_stage_model.transformer.embeddings.': 'cond_stage_model.transformer.text_model.embeddings.',
-    'cond_stage_model.transformer.encoder.': 'cond_stage_model.transformer.text_model.encoder.',
-    'cond_stage_model.transformer.final_layer_norm.': 'cond_stage_model.transformer.text_model.final_layer_norm.',
+    "cond_stage_model.transformer.embeddings.": "cond_stage_model.transformer.text_model.embeddings.",
+    "cond_stage_model.transformer.encoder.": "cond_stage_model.transformer.text_model.encoder.",
+    "cond_stage_model.transformer.final_layer_norm.": "cond_stage_model.transformer.text_model.final_layer_norm.",
 }
 
 
 def transform_checkpoint_dict_key(k):
     for text, replacement in chckpoint_dict_replacements.items():
         if k.startswith(text):
-            k = replacement + k[len(text):]
+            k = replacement + k[len(text) :]
 
     return k
 
@@ -177,7 +209,11 @@ def load_model_weights(model, checkpoint_info):
             model.half()
 
         devices.dtype = torch.float32 if shared.cmd_opts.no_half else torch.float16
-        devices.dtype_vae = torch.float32 if shared.cmd_opts.no_half or shared.cmd_opts.no_half_vae else torch.float16
+        devices.dtype_vae = (
+            torch.float32
+            if shared.cmd_opts.no_half or shared.cmd_opts.no_half_vae
+            else torch.float16
+        )
 
         vae_file = os.path.splitext(checkpoint_file)[0] + ".vae.pt"
 
@@ -187,7 +223,11 @@ def load_model_weights(model, checkpoint_info):
         if os.path.exists(vae_file):
             print(f"Loading VAE weights from: {vae_file}")
             vae_ckpt = torch.load(vae_file, map_location=shared.weight_load_location)
-            vae_dict = {k: v for k, v in vae_ckpt["state_dict"].items() if k[0:4] != "loss" and k not in vae_ignore_keys}
+            vae_dict = {
+                k: v
+                for k, v in vae_ckpt["state_dict"].items()
+                if k[0:4] != "loss" and k not in vae_ignore_keys
+            }
             model.first_stage_model.load_state_dict(vae_dict)
 
         model.first_stage_model.to(devices.dtype_vae)
@@ -207,6 +247,7 @@ def load_model_weights(model, checkpoint_info):
 
 def load_model(checkpoint_info=None):
     from modules import lowvram, sd_hijack
+
     checkpoint_info = checkpoint_info or select_checkpoint()
 
     if checkpoint_info.config != shared.cmd_opts.config:
@@ -222,7 +263,9 @@ def load_model(checkpoint_info=None):
         sd_config.model.params.unet_config.params.in_channels = 9
 
         # Create a "fake" config with a different name so that we know to unload it when switching models.
-        checkpoint_info = checkpoint_info._replace(config=checkpoint_info.config.replace(".yaml", "-inpainting.yaml"))
+        checkpoint_info = checkpoint_info._replace(
+            config=checkpoint_info.config.replace(".yaml", "-inpainting.yaml")
+        )
 
     do_inpainting_hijack()
     sd_model = instantiate_from_config(sd_config.model)
@@ -246,12 +289,17 @@ def load_model(checkpoint_info=None):
 
 def reload_model_weights(sd_model, info=None):
     from modules import lowvram, devices, sd_hijack
+
     checkpoint_info = info or select_checkpoint()
 
     if sd_model.sd_model_checkpoint == checkpoint_info.filename:
         return
 
-    if sd_model.sd_checkpoint_info.config != checkpoint_info.config or should_hijack_inpainting(checkpoint_info) != should_hijack_inpainting(sd_model.sd_checkpoint_info):
+    if (
+        sd_model.sd_checkpoint_info.config != checkpoint_info.config
+        or should_hijack_inpainting(checkpoint_info)
+        != should_hijack_inpainting(sd_model.sd_checkpoint_info)
+    ):
         checkpoints_loaded.clear()
         load_model(checkpoint_info)
         return shared.sd_model

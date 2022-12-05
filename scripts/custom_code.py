@@ -6,7 +6,6 @@ from modules.shared import cmd_opts
 
 
 class Script(scripts.Script):
-
     def title(self):
         return "Custom code"
 
@@ -18,9 +17,8 @@ class Script(scripts.Script):
 
         return [code]
 
-
     def run(self, p, code):
-        assert cmd_opts.allow_code, '--allow-code option must be enabled'
+        assert cmd_opts.allow_code, "--allow-code option must be enabled"
 
         display_result_data = [[], -1, ""]
 
@@ -30,7 +28,8 @@ class Script(scripts.Script):
             display_result_data[2] = i
 
         from types import ModuleType
-        compiled = compile(code, '', 'exec')
+
+        compiled = compile(code, "", "exec")
         module = ModuleType("testmodule")
         module.__dict__.update(globals())
         module.p = p

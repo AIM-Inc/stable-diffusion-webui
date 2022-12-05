@@ -87,13 +87,27 @@ def initialize():
     modules.scripts.load_scripts()
 
     modules.sd_models.load_model()
-    shared.opts.onchange("sd_model_checkpoint", wrap_queued_call(lambda: modules.sd_models.reload_model_weights(shared.sd_model)))
-    shared.opts.onchange("sd_hypernetwork", wrap_queued_call(lambda: modules.hypernetworks.hypernetwork.load_hypernetwork(shared.opts.sd_hypernetwork)))
-    shared.opts.onchange("sd_hypernetwork_strength", modules.hypernetworks.hypernetwork.apply_strength)
+    shared.opts.onchange(
+        "sd_model_checkpoint",
+        wrap_queued_call(
+            lambda: modules.sd_models.reload_model_weights(shared.sd_model)
+        ),
+    )
+    shared.opts.onchange(
+        "sd_hypernetwork",
+        wrap_queued_call(
+            lambda: modules.hypernetworks.hypernetwork.load_hypernetwork(
+                shared.opts.sd_hypernetwork
+            )
+        ),
+    )
+    shared.opts.onchange(
+        "sd_hypernetwork_strength", modules.hypernetworks.hypernetwork.apply_strength
+    )
 
     # make the program just exit at ctrl+c without waiting for anything
     def sigint_handler(sig, frame):
-        print(f'Interrupted with signal {sig} in {frame}')
+        print(f"Interrupted with signal {sig} in {frame}")
         os._exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)
@@ -101,17 +115,20 @@ def initialize():
 
 def create_api(app):
     from modules.api.api import Api
+
     api = Api(app, queue_lock)
     return api
+
 
 def wait_on_server(demo=None):
     while 1:
         time.sleep(0.5)
-        if demo and getattr(demo, 'do_restart', False):
+        if demo and getattr(demo, "do_restart", False):
             time.sleep(0.5)
             demo.close()
             time.sleep(0.5)
             break
+
 
 def api_only():
     initialize()
@@ -120,7 +137,10 @@ def api_only():
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     api = create_api(app)
 
-    api.launch(server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1", port=cmd_opts.port if cmd_opts.port else 7861)
+    api.launch(
+        server_name="0.0.0.0" if cmd_opts.listen else "127.0.0.1",
+        port=cmd_opts.port if cmd_opts.port else 7861,
+    )
 
 
 def webui():
@@ -135,30 +155,34 @@ def webui():
             server_name="0.0.0.0" if cmd_opts.listen else None,
             server_port=cmd_opts.port,
             debug=cmd_opts.gradio_debug,
-            auth=[tuple(cred.split(':')) for cred in cmd_opts.gradio_auth.strip('"').split(',')] if cmd_opts.gradio_auth else None,
+            auth=[
+                tuple(cred.split(":"))
+                for cred in cmd_opts.gradio_auth.strip('"').split(",")
+            ]
+            if cmd_opts.gradio_auth
+            else None,
             inbrowser=cmd_opts.autolaunch,
-            prevent_thread_lock=True
+            prevent_thread_lock=True,
         )
         # after initial launch, disable --autolaunch for subsequent restarts
         cmd_opts.autolaunch = False
 
         app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-        if (launch_api):
+        if launch_api:
             create_api(app)
 
         wait_on_server(demo)
 
         sd_samplers.set_samplers()
 
-        print('Reloading Custom Scripts')
+        print("Reloading Custom Scripts")
         modules.scripts.reload_scripts()
-        print('Reloading modules: modules.ui')
+        print("Reloading modules: modules.ui")
         importlib.reload(modules.ui)
-        print('Refreshing Model List')
+        print("Refreshing Model List")
         modules.sd_models.list_models()
-        print('Restarting Gradio')
-
+        print("Restarting Gradio")
 
 
 task = []

@@ -50,7 +50,7 @@ prompt_tags = {
     "restore_faces": process_boolean_tag,
     "tiling": process_boolean_tag,
     "do_not_save_samples": process_boolean_tag,
-    "do_not_save_grid": process_boolean_tag
+    "do_not_save_grid": process_boolean_tag,
 }
 
 
@@ -66,11 +66,11 @@ def cmdargs(line):
         tag = arg[2:]
 
         func = prompt_tags.get(tag, None)
-        assert func, f'unknown commandline option: {arg}'
+        assert func, f"unknown commandline option: {arg}"
 
-        assert pos+1 < len(args), f'missing argument for command line option {arg}'
+        assert pos + 1 < len(args), f"missing argument for command line option {arg}"
 
-        val = args[pos+1]
+        val = args[pos + 1]
 
         res[tag] = func(val)
 
@@ -80,10 +80,10 @@ def cmdargs(line):
 
 
 def load_prompt_file(file):
-    if (file is None):
+    if file is None:
         lines = []
     else:
-        lines = [x.strip() for x in file.decode('utf8', errors='ignore').split("\n")]
+        lines = [x.strip() for x in file.decode("utf8", errors="ignore").split("\n")]
 
     return None, "\n".join(lines), gr.update(lines=7)
 
@@ -96,14 +96,20 @@ class Script(scripts.Script):
         checkbox_iterate = gr.Checkbox(label="Iterate seed every line", value=False)
 
         prompt_txt = gr.Textbox(label="List of prompt inputs", lines=1)
-        file = gr.File(label="Upload prompt inputs", type='bytes')
+        file = gr.File(label="Upload prompt inputs", type="bytes")
 
-        file.change(fn=load_prompt_file, inputs=[file], outputs=[file, prompt_txt, prompt_txt])
+        file.change(
+            fn=load_prompt_file, inputs=[file], outputs=[file, prompt_txt, prompt_txt]
+        )
 
         # We start at one line. When the text changes, we jump to seven lines, or two lines if no \n.
         # We don't shrink back to 1, because that causes the control to ignore [enter], and it may
         # be unclear to the user that shift-enter is needed.
-        prompt_txt.change(lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2), inputs=[prompt_txt], outputs=[prompt_txt])
+        prompt_txt.change(
+            lambda tb: gr.update(lines=7) if ("\n" in tb) else gr.update(lines=2),
+            inputs=[prompt_txt],
+            outputs=[prompt_txt],
+        )
         return [checkbox_iterate, file, prompt_txt]
 
     def run(self, p, checkbox_iterate, file, prompt_txt: str):
@@ -135,7 +141,7 @@ class Script(scripts.Script):
             jobs.append(args)
 
         print(f"Will process {len(lines)} lines in {job_count} jobs.")
-        if (checkbox_iterate and p.seed == -1):
+        if checkbox_iterate and p.seed == -1:
             p.seed = int(random.randrange(4294967294))
 
         state.job_count = job_count
@@ -151,8 +157,7 @@ class Script(scripts.Script):
             proc = process_images(copy_p)
             images += proc.images
 
-            if (checkbox_iterate):
+            if checkbox_iterate:
                 p.seed = p.seed + (p.batch_size * p.n_iter)
-
 
         return Processed(p, images, p.seed, "")

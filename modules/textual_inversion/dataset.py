@@ -24,8 +24,25 @@ class DatasetEntry:
 
 
 class PersonalizedBase(Dataset):
-    def __init__(self, data_root, width, height, repeats, flip_p=0.5, placeholder_token="*", model=None, device=None, template_file=None, include_cond=False, batch_size=1):
-        re_word = re.compile(shared.opts.dataset_filename_word_regex) if len(shared.opts.dataset_filename_word_regex) > 0 else None
+    def __init__(
+        self,
+        data_root,
+        width,
+        height,
+        repeats,
+        flip_p=0.5,
+        placeholder_token="*",
+        model=None,
+        device=None,
+        template_file=None,
+        include_cond=False,
+        batch_size=1,
+    ):
+        re_word = (
+            re.compile(shared.opts.dataset_filename_word_regex)
+            if len(shared.opts.dataset_filename_word_regex) > 0
+            else None
+        )
 
         self.placeholder_token = placeholder_token
 
@@ -41,15 +58,21 @@ class PersonalizedBase(Dataset):
 
         self.lines = lines
 
-        assert data_root, 'dataset directory not specified'
+        assert data_root, "dataset directory not specified"
 
         cond_model = shared.sd_model.cond_stage_model
 
-        self.image_paths = [os.path.join(data_root, file_path) for file_path in os.listdir(data_root)]
+        self.image_paths = [
+            os.path.join(data_root, file_path) for file_path in os.listdir(data_root)
+        ]
         print("Preparing dataset...")
         for path in tqdm.tqdm(self.image_paths):
             try:
-                image = Image.open(path).convert('RGB').resize((self.width, self.height), PIL.Image.BICUBIC)
+                image = (
+                    Image.open(path)
+                    .convert("RGB")
+                    .resize((self.width, self.height), PIL.Image.BICUBIC)
+                )
             except Exception:
                 continue
 
@@ -61,10 +84,12 @@ class PersonalizedBase(Dataset):
                     filename_text = file.read()
             else:
                 filename_text = os.path.splitext(filename)[0]
-                filename_text = re.sub(re_numbers_at_start, '', filename_text)
+                filename_text = re.sub(re_numbers_at_start, "", filename_text)
                 if re_word:
                     tokens = re_word.findall(filename_text)
-                    filename_text = (shared.opts.dataset_filename_join_string or "").join(tokens)
+                    filename_text = (
+                        shared.opts.dataset_filename_join_string or ""
+                    ).join(tokens)
 
             npimage = np.array(image).astype(np.uint8)
             npimage = (npimage / 127.5 - 1.0).astype(np.float32)
@@ -72,10 +97,14 @@ class PersonalizedBase(Dataset):
             torchdata = torch.from_numpy(npimage).to(device=device, dtype=torch.float32)
             torchdata = torch.moveaxis(torchdata, 2, 0)
 
-            init_latent = model.get_first_stage_encoding(model.encode_first_stage(torchdata.unsqueeze(dim=0))).squeeze()
+            init_latent = model.get_first_stage_encoding(
+                model.encode_first_stage(torchdata.unsqueeze(dim=0))
+            ).squeeze()
             init_latent = init_latent.to(devices.cpu)
 
-            entry = DatasetEntry(filename=path, filename_text=filename_text, latent=init_latent)
+            entry = DatasetEntry(
+                filename=path, filename_text=filename_text, latent=init_latent
+            )
 
             if include_cond:
                 entry.cond_text = self.create_text(filename_text)
@@ -91,7 +120,9 @@ class PersonalizedBase(Dataset):
         self.shuffle()
 
     def shuffle(self):
-        self.indexes = self.initial_indexes[torch.randperm(self.initial_indexes.shape[0]).numpy()]
+        self.indexes = self.initial_indexes[
+            torch.randperm(self.initial_indexes.shape[0]).numpy()
+        ]
 
     def create_text(self, filename_text):
         text = random.choice(self.lines)

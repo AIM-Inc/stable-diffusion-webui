@@ -29,7 +29,7 @@ def preprocess(
     process_focal_crop_face_weight=0.9,
     process_focal_crop_entropy_weight=0.3,
     process_focal_crop_edges_weight=0.5,
-    process_focal_crop_debug=False
+    process_focal_crop_debug=False,
 ):
     try:
         if process_caption:
@@ -38,7 +38,9 @@ def preprocess(
         if process_caption_deepbooru:
             db_opts = deepbooru.create_deepbooru_opts()
             db_opts[deepbooru.OPT_INCLUDE_RANKS] = False
-            deepbooru.create_deepbooru_process(opts.interrogate_deepbooru_score_threshold, db_opts)
+            deepbooru.create_deepbooru_process(
+                opts.interrogate_deepbooru_score_threshold, db_opts
+            )
 
         preprocess_work(
             process_src,
@@ -56,7 +58,7 @@ def preprocess(
             process_focal_crop_face_weight,
             process_focal_crop_entropy_weight,
             process_focal_crop_edges_weight,
-            process_focal_crop_debug
+            process_focal_crop_debug,
         )
     finally:
         if process_caption:
@@ -82,7 +84,7 @@ def preprocess_work(
     process_focal_crop_face_weight=0.9,
     process_focal_crop_entropy_weight=0.3,
     process_focal_crop_edges_weight=0.5,
-    process_focal_crop_debug=False
+    process_focal_crop_debug=False,
 ):
     width = process_width
     height = process_height
@@ -91,7 +93,7 @@ def preprocess_work(
     split_threshold = max(0.0, min(1.0, split_threshold))
     overlap_ratio = max(0.0, min(0.9, overlap_ratio))
 
-    assert src != dst, 'same directory specified as source and destination'
+    assert src != dst, "same directory specified as source and destination"
 
     os.makedirs(dst, exist_ok=True)
 
@@ -118,17 +120,19 @@ def preprocess_work(
         basename = f"{index:05}-{subindex[0]}-{filename_part}"
         image.save(os.path.join(dst, f"{basename}.png"))
 
-        if preprocess_txt_action == 'prepend' and existing_caption:
-            caption = existing_caption + ' ' + caption
-        elif preprocess_txt_action == 'append' and existing_caption:
-            caption = caption + ' ' + existing_caption
-        elif preprocess_txt_action == 'copy' and existing_caption:
+        if preprocess_txt_action == "prepend" and existing_caption:
+            caption = existing_caption + " " + caption
+        elif preprocess_txt_action == "append" and existing_caption:
+            caption = caption + " " + existing_caption
+        elif preprocess_txt_action == "copy" and existing_caption:
             caption = existing_caption
 
         caption = caption.strip()
 
         if len(caption) > 0:
-            with open(os.path.join(dst, f"{basename}.txt"), "w", encoding="utf8") as file:
+            with open(
+                os.path.join(dst, f"{basename}.txt"), "w", encoding="utf8"
+            ) as file:
                 file.write(caption)
 
         subindex[0] += 1
@@ -137,7 +141,9 @@ def preprocess_work(
         save_pic_with_caption(image, index, existing_caption=existing_caption)
 
         if process_flip:
-            save_pic_with_caption(ImageOps.mirror(image), index, existing_caption=existing_caption)
+            save_pic_with_caption(
+                ImageOps.mirror(image), index, existing_caption=existing_caption
+            )
 
     def split_pic(image, inverse_xy):
         if inverse_xy:
@@ -152,7 +158,9 @@ def preprocess_work(
         else:
             image = image.resize((to_w, h))
 
-        split_count = math.ceil((h - to_h * overlap_ratio) / (to_h * (1.0 - overlap_ratio)))
+        split_count = math.ceil(
+            (h - to_h * overlap_ratio) / (to_h * (1.0 - overlap_ratio))
+        )
         y_step = (h - to_h) / (split_count - 1)
 
         for i in range(split_count):
@@ -172,10 +180,10 @@ def preprocess_work(
             continue
 
         existing_caption = None
-        existing_caption_filename = os.path.splitext(filename)[0] + '.txt'
+        existing_caption_filename = os.path.splitext(filename)[0] + ".txt"
 
         if os.path.exists(existing_caption_filename):
-            with open(existing_caption_filename, 'r', encoding="utf8") as file:
+            with open(existing_caption_filename, "r", encoding="utf8") as file:
                 existing_caption = file.read()
 
         if shared.state.interrupted:
@@ -199,18 +207,23 @@ def preprocess_work(
 
             dnn_model_path = None
             try:
-                dnn_model_path = autocrop.download_and_cache_models(os.path.join(models_path, "opencv"))
+                dnn_model_path = autocrop.download_and_cache_models(
+                    os.path.join(models_path, "opencv")
+                )
             except Exception as e:
-                print("Unable to load face detection model for auto crop selection. Falling back to lower quality haar method.", e)
+                print(
+                    "Unable to load face detection model for auto crop selection. Falling back to lower quality haar method.",
+                    e,
+                )
 
             autocrop_settings = autocrop.Settings(
-                crop_width = width,
-                crop_height = height,
-                face_points_weight = process_focal_crop_face_weight,
-                entropy_points_weight = process_focal_crop_entropy_weight,
-                corner_points_weight = process_focal_crop_edges_weight,
-                annotate_image = process_focal_crop_debug,
-                dnn_model_path = dnn_model_path,
+                crop_width=width,
+                crop_height=height,
+                face_points_weight=process_focal_crop_face_weight,
+                entropy_points_weight=process_focal_crop_entropy_weight,
+                corner_points_weight=process_focal_crop_edges_weight,
+                annotate_image=process_focal_crop_debug,
+                dnn_model_path=dnn_model_path,
             )
 
             for focal in autocrop.crop_image(img, autocrop_settings):

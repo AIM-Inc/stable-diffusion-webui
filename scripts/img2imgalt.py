@@ -31,7 +31,9 @@ def find_noise_for_image(p, cond, uncond, cfg_scale, steps):
         image_conditioning = torch.cat([p.image_conditioning] * 2)
         cond_in = {"c_concat": [image_conditioning], "c_crossattn": [cond_in]}
 
-        c_out, c_in = [K.utils.append_dims(k, x_in.ndim) for k in dnw.get_scalings(sigma_in)]
+        c_out, c_in = [
+            K.utils.append_dims(k, x_in.ndim) for k in dnw.get_scalings(sigma_in)
+        ]
         t = dnw.sigma_to_t(sigma_in)
 
         eps = shared.sd_model.apply_model(x_in * c_in, t, cond=cond_in)
@@ -47,7 +49,14 @@ def find_noise_for_image(p, cond, uncond, cfg_scale, steps):
         sd_samplers.store_latent(x)
 
         # This shouldn't be necessary, but solved some VRAM issues
-        del x_in, sigma_in, cond_in, c_out, c_in, t,
+        del (
+            x_in,
+            sigma_in,
+            cond_in,
+            c_out,
+            c_in,
+            t,
+        )
         del eps, denoised_uncond, denoised_cond, denoised, d, dt
 
     shared.state.nextjob()
@@ -55,7 +64,18 @@ def find_noise_for_image(p, cond, uncond, cfg_scale, steps):
     return x / x.std()
 
 
-Cached = namedtuple("Cached", ["noise", "cfg_scale", "steps", "latent", "original_prompt", "original_negative_prompt", "sigma_adjustment"])
+Cached = namedtuple(
+    "Cached",
+    [
+        "noise",
+        "cfg_scale",
+        "steps",
+        "latent",
+        "original_prompt",
+        "original_negative_prompt",
+        "sigma_adjustment",
+    ],
+)
 
 
 # Based on changes suggested by briansemrau in https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/736
@@ -78,7 +98,9 @@ def find_noise_for_image_sigma_adjustment(p, cond, uncond, cfg_scale, steps):
         image_conditioning = torch.cat([p.image_conditioning] * 2)
         cond_in = {"c_concat": [image_conditioning], "c_crossattn": [cond_in]}
 
-        c_out, c_in = [K.utils.append_dims(k, x_in.ndim) for k in dnw.get_scalings(sigma_in)]
+        c_out, c_in = [
+            K.utils.append_dims(k, x_in.ndim) for k in dnw.get_scalings(sigma_in)
+        ]
 
         if i == 1:
             t = dnw.sigma_to_t(torch.cat([sigmas[i] * s_in] * 2))
@@ -101,7 +123,14 @@ def find_noise_for_image_sigma_adjustment(p, cond, uncond, cfg_scale, steps):
         sd_samplers.store_latent(x)
 
         # This shouldn't be necessary, but solved some VRAM issues
-        del x_in, sigma_in, cond_in, c_out, c_in, t,
+        del (
+            x_in,
+            sigma_in,
+            cond_in,
+            c_out,
+            c_in,
+            t,
+        )
         del eps, denoised_uncond, denoised_cond, denoised, d, dt
 
     shared.state.nextjob()
@@ -120,38 +149,78 @@ class Script(scripts.Script):
         return is_img2img
 
     def ui(self, is_img2img):
-        info = gr.Markdown('''
+        info = gr.Markdown(
+            """
         * `CFG Scale` should be 2 or lower.
-        ''')
+        """
+        )
 
-        override_sampler = gr.Checkbox(label="Override `Sampling method` to Euler?(this method is built for it)", value=True)
+        override_sampler = gr.Checkbox(
+            label="Override `Sampling method` to Euler?(this method is built for it)",
+            value=True,
+        )
 
-        override_prompt = gr.Checkbox(label="Override `prompt` to the same value as `original prompt`?(and `negative prompt`)", value=True)
+        override_prompt = gr.Checkbox(
+            label="Override `prompt` to the same value as `original prompt`?(and `negative prompt`)",
+            value=True,
+        )
         original_prompt = gr.Textbox(label="Original prompt", lines=1)
         original_negative_prompt = gr.Textbox(label="Original negative prompt", lines=1)
 
-        override_steps = gr.Checkbox(label="Override `Sampling Steps` to the same value as `Decode steps`?", value=True)
+        override_steps = gr.Checkbox(
+            label="Override `Sampling Steps` to the same value as `Decode steps`?",
+            value=True,
+        )
         st = gr.Slider(label="Decode steps", minimum=1, maximum=150, step=1, value=50)
 
-        override_strength = gr.Checkbox(label="Override `Denoising strength` to 1?", value=True)
+        override_strength = gr.Checkbox(
+            label="Override `Denoising strength` to 1?", value=True
+        )
 
-        cfg = gr.Slider(label="Decode CFG scale", minimum=0.0, maximum=15.0, step=0.1, value=1.0)
-        randomness = gr.Slider(label="Randomness", minimum=0.0, maximum=1.0, step=0.01, value=0.0)
-        sigma_adjustment = gr.Checkbox(label="Sigma adjustment for finding noise for image", value=False)
+        cfg = gr.Slider(
+            label="Decode CFG scale", minimum=0.0, maximum=15.0, step=0.1, value=1.0
+        )
+        randomness = gr.Slider(
+            label="Randomness", minimum=0.0, maximum=1.0, step=0.01, value=0.0
+        )
+        sigma_adjustment = gr.Checkbox(
+            label="Sigma adjustment for finding noise for image", value=False
+        )
 
         return [
             info,
             override_sampler,
-            override_prompt, original_prompt, original_negative_prompt,
-            override_steps, st,
+            override_prompt,
+            original_prompt,
+            original_negative_prompt,
+            override_steps,
+            st,
             override_strength,
-            cfg, randomness, sigma_adjustment,
+            cfg,
+            randomness,
+            sigma_adjustment,
         ]
 
-    def run(self, p, _, override_sampler, override_prompt, original_prompt, original_negative_prompt, override_steps, st, override_strength, cfg, randomness, sigma_adjustment):
+    def run(
+        self,
+        p,
+        _,
+        override_sampler,
+        override_prompt,
+        original_prompt,
+        original_negative_prompt,
+        override_steps,
+        st,
+        override_strength,
+        cfg,
+        randomness,
+        sigma_adjustment,
+    ):
         # Override
         if override_sampler:
-            p.sampler_index = [sampler.name for sampler in sd_samplers.samplers].index("Euler")
+            p.sampler_index = [sampler.name for sampler in sd_samplers.samplers].index(
+                "Euler"
+            )
         if override_prompt:
             p.prompt = original_prompt
             p.negative_prompt = original_negative_prompt
@@ -160,33 +229,68 @@ class Script(scripts.Script):
         if override_strength:
             p.denoising_strength = 1.0
 
-
-        def sample_extra(conditioning, unconditional_conditioning, seeds, subseeds, subseed_strength):
+        def sample_extra(
+            conditioning, unconditional_conditioning, seeds, subseeds, subseed_strength
+        ):
             lat = (p.init_latent.cpu().numpy() * 10).astype(int)
 
-            same_params = self.cache is not None and self.cache.cfg_scale == cfg and self.cache.steps == st \
-                                and self.cache.original_prompt == original_prompt \
-                                and self.cache.original_negative_prompt == original_negative_prompt \
-                                and self.cache.sigma_adjustment == sigma_adjustment
-            same_everything = same_params and self.cache.latent.shape == lat.shape and np.abs(self.cache.latent-lat).sum() < 100
+            same_params = (
+                self.cache is not None
+                and self.cache.cfg_scale == cfg
+                and self.cache.steps == st
+                and self.cache.original_prompt == original_prompt
+                and self.cache.original_negative_prompt == original_negative_prompt
+                and self.cache.sigma_adjustment == sigma_adjustment
+            )
+            same_everything = (
+                same_params
+                and self.cache.latent.shape == lat.shape
+                and np.abs(self.cache.latent - lat).sum() < 100
+            )
 
             if same_everything:
                 rec_noise = self.cache.noise
             else:
                 shared.state.job_count += 1
-                cond = p.sd_model.get_learned_conditioning(p.batch_size * [original_prompt])
-                uncond = p.sd_model.get_learned_conditioning(p.batch_size * [original_negative_prompt])
+                cond = p.sd_model.get_learned_conditioning(
+                    p.batch_size * [original_prompt]
+                )
+                uncond = p.sd_model.get_learned_conditioning(
+                    p.batch_size * [original_negative_prompt]
+                )
                 if sigma_adjustment:
-                    rec_noise = find_noise_for_image_sigma_adjustment(p, cond, uncond, cfg, st)
+                    rec_noise = find_noise_for_image_sigma_adjustment(
+                        p, cond, uncond, cfg, st
+                    )
                 else:
                     rec_noise = find_noise_for_image(p, cond, uncond, cfg, st)
-                self.cache = Cached(rec_noise, cfg, st, lat, original_prompt, original_negative_prompt, sigma_adjustment)
+                self.cache = Cached(
+                    rec_noise,
+                    cfg,
+                    st,
+                    lat,
+                    original_prompt,
+                    original_negative_prompt,
+                    sigma_adjustment,
+                )
 
-            rand_noise = processing.create_random_tensors(p.init_latent.shape[1:], seeds=seeds, subseeds=subseeds, subseed_strength=p.subseed_strength, seed_resize_from_h=p.seed_resize_from_h, seed_resize_from_w=p.seed_resize_from_w, p=p)
+            rand_noise = processing.create_random_tensors(
+                p.init_latent.shape[1:],
+                seeds=seeds,
+                subseeds=subseeds,
+                subseed_strength=p.subseed_strength,
+                seed_resize_from_h=p.seed_resize_from_h,
+                seed_resize_from_w=p.seed_resize_from_w,
+                p=p,
+            )
 
-            combined_noise = ((1 - randomness) * rec_noise + randomness * rand_noise) / ((randomness**2 + (1-randomness)**2) ** 0.5)
+            combined_noise = (
+                (1 - randomness) * rec_noise + randomness * rand_noise
+            ) / ((randomness**2 + (1 - randomness) ** 2) ** 0.5)
 
-            sampler = sd_samplers.create_sampler_with_index(sd_samplers.samplers, p.sampler_index, p.sd_model)
+            sampler = sd_samplers.create_sampler_with_index(
+                sd_samplers.samplers, p.sampler_index, p.sd_model
+            )
 
             sigmas = sampler.model_wrap.get_sigmas(p.steps)
 
@@ -194,7 +298,14 @@ class Script(scripts.Script):
 
             p.seed = p.seed + 1
 
-            return sampler.sample_img2img(p, p.init_latent, noise_dt, conditioning, unconditional_conditioning, image_conditioning=p.image_conditioning)
+            return sampler.sample_img2img(
+                p,
+                p.init_latent,
+                noise_dt,
+                conditioning,
+                unconditional_conditioning,
+                image_conditioning=p.image_conditioning,
+            )
 
         p.sample = sample_extra
 
