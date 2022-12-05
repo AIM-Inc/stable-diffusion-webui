@@ -7,7 +7,6 @@ const handleData = ($component) => {
       const image_data = JSON.parse(json);
 
       image_data.forEach((_data, index) => {
-        galleryData.set(`seed-${_data[`seed-${index}`]}-index-${index}`, _data);
         addImageScore(_data);
       });
 
