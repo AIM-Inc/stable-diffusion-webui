@@ -13,12 +13,13 @@ from fastapi.middleware.gzip import GZipMiddleware
 from modules.paths import script_path
 
 from modules import devices, sd_samplers, upscaler
+
+import launch
 import modules.codeformer_model as codeformer
 import modules.extras
 import modules.face_restoration
 import modules.gfpgan_model as gfpgan
 import modules.img2img
-
 import modules.lowvram
 import modules.paths
 import modules.scripts
@@ -114,6 +115,10 @@ def initialize():
         os._exit(0)
 
     signal.signal(signal.SIGINT, sigint_handler)
+
+
+def download_extensions():
+
 
 
 def create_api(app):
