@@ -28,3 +28,4 @@ notification.mp3
 /textual_inversion
 .vscode
 .DS_Store
+*.pt

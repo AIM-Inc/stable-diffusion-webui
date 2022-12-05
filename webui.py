@@ -25,6 +25,7 @@ import modules.scripts
 import modules.sd_hijack
 import modules.sd_models
 import modules.shared as shared
+import modules.txt2img
 import modules.ui
 
 from modules import modelloader
