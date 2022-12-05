@@ -10,29 +10,29 @@ from fastapi.middleware.gzip import GZipMiddleware
 # DO NOT REMOVE this import. The code breaks if it's removed because
 # the SD project was built by programmers who know nothing about Python
 # modules. >=|
-from modules.paths import script_path
+# from modules.paths import script_path
 
-from modules import devices, sd_samplers, upscaler
+# from modules import devices, sd_samplers, upscaler
 
-import launch
-import modules.codeformer_model as codeformer
-import modules.extras
-import modules.face_restoration
-import modules.gfpgan_model as gfpgan
-import modules.img2img
-import modules.lowvram
-import modules.paths
-import modules.scripts
-import modules.sd_hijack
-import modules.sd_models
-import modules.shared as shared
-import modules.txt2img
-import modules.ui
+# import modules.codeformer_model as codeformer
+# import modules.extras
+# import modules.face_restoration
+# import modules.gfpgan_model as gfpgan
+# import modules.img2img
+# import modules.lowvram
+# import modules.paths
+# import modules.scripts
+# import modules.sd_hijack
+# import modules.sd_models
+# import modules.shared as shared
+# import modules.txt2img
+# import modules.ui
 
-from modules import modelloader
-from modules.shared import cmd_opts
+# from modules import modelloader
+# from modules.shared import cmd_opts
 
-import modules.hypernetworks.hypernetwork
+# import modules.hypernetworks.hypernetwork
+from utils.extensions import download_extensions
 
 queue_lock = threading.Lock()
 
@@ -117,10 +117,6 @@ def initialize():
     signal.signal(signal.SIGINT, sigint_handler)
 
 
-def download_extensions():
-
-
-
 def create_api(app):
     from modules.api.api import Api
 
@@ -152,50 +148,55 @@ def api_only():
 
 
 def webui():
-    launch_api = cmd_opts.api
-    initialize()
+    # launch_api = cmd_opts.api
 
-    while 1:
-        demo = modules.ui.create_ui(wrap_gradio_gpu_call=wrap_gradio_gpu_call)
+    # initialize()
+    # download_repos()
+    download_extensions()
 
-        app, local_url, share_url = demo.launch(
-            share=cmd_opts.share,
-            server_name="0.0.0.0" if cmd_opts.listen else None,
-            server_port=cmd_opts.port,
-            debug=cmd_opts.gradio_debug,
-            auth=[
-                tuple(cred.split(":"))
-                for cred in cmd_opts.gradio_auth.strip('"').split(",")
-            ]
-            if cmd_opts.gradio_auth
-            else None,
-            inbrowser=cmd_opts.autolaunch,
-            prevent_thread_lock=True,
-        )
-        # after initial launch, disable --autolaunch for subsequent restarts
-        cmd_opts.autolaunch = False
+    print("=======DONE========")
 
-        app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # while 1:
+    #     demo = modules.ui.create_ui(wrap_gradio_gpu_call=wrap_gradio_gpu_call)
 
-        if launch_api:
-            create_api(app)
+    #     app, local_url, share_url = demo.launch(
+    #         share=cmd_opts.share,
+    #         server_name="0.0.0.0" if cmd_opts.listen else None,
+    #         server_port=cmd_opts.port,
+    #         debug=cmd_opts.gradio_debug,
+    #         auth=[
+    #             tuple(cred.split(":"))
+    #             for cred in cmd_opts.gradio_auth.strip('"').split(",")
+    #         ]
+    #         if cmd_opts.gradio_auth
+    #         else None,
+    #         inbrowser=cmd_opts.autolaunch,
+    #         prevent_thread_lock=True,
+    #     )
+    #     # after initial launch, disable --autolaunch for subsequent restarts
+    #     cmd_opts.autolaunch = False
 
-        wait_on_server(demo)
+    #     app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-        sd_samplers.set_samplers()
+    #     if launch_api:
+    #         create_api(app)
 
-        print("Reloading Custom Scripts")
-        modules.scripts.reload_scripts()
-        print("Reloading modules: modules.ui")
-        importlib.reload(modules.ui)
-        print("Refreshing Model List")
-        modules.sd_models.list_models()
-        print("Restarting Gradio")
+    #     wait_on_server(demo)
+
+    #     sd_samplers.set_samplers()
+
+    #     print("Reloading Custom Scripts")
+    #     modules.scripts.reload_scripts()
+    #     print("Reloading modules: modules.ui")
+    #     importlib.reload(modules.ui)
+    #     print("Refreshing Model List")
+    #     modules.sd_models.list_models()
+    #     print("Restarting Gradio")
 
 
 task = []
 if __name__ == "__main__":
-    if cmd_opts.nowebui:
-        api_only()
-    else:
-        webui()
+    # if cmd_opts.nowebui:
+    #     api_only()
+    # else:
+    webui()
