@@ -1,0 +1,11 @@
+{
+  "depthmap2mask": {
+    "repositories": [
+      {
+        "url": "https://github.com/isl-org/MiDaS.git",
+        "path": "repositories/midas",
+        "name": "midas"
+      }
+    ]
+  }
+}

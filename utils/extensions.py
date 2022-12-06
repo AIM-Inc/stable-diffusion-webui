@@ -37,6 +37,17 @@ def download_extensions():
             f"Cloning Stable Diffusion Extensions into {extensions_dir}...",
             "Couldn't clone Stable Diffusion Extensions",
         )
+        # Remove .git stuff so it's not treated as a submodule
+        run(
+            "rm -rf extensions/.git",
+            "Removing .git links",
+            "Failed to remove .git links",
+        )
+        run(
+            "rm extensions/.gitignore",
+            "Removing .gitignore from extensions/",
+            "Failed to remove .gitignore from extensions/",
+        )
 
         repos = []
 

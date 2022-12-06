@@ -1,0 +1,15 @@
+.gallery-item {
+  position: relative;
+}
+
+.gallery-item .caption {
+  position: absolute;
+  /* bottom-right position */
+  bottom: 8px;
+  right: 16px;
+
+  background-color: white;
+  font-weight: 600;
+  color: black;
+  padding: 2px 5px;
+}
