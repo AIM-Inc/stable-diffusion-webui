@@ -33,6 +33,7 @@ from modules.shared import cmd_opts
 
 import modules.hypernetworks.hypernetwork
 from utils.extensions import download_extensions
+from utils.repos import download_repos
 
 queue_lock = threading.Lock()
 
@@ -150,9 +151,9 @@ def api_only():
 def webui():
     launch_api = cmd_opts.api
 
-    initialize()
-    # download_repos()
+    download_repos()
     download_extensions()
+    initialize()
 
     while 1:
         demo = modules.ui.create_ui(wrap_gradio_gpu_call=wrap_gradio_gpu_call)

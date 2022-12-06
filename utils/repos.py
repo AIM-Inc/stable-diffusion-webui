@@ -28,7 +28,7 @@ def download_repos():
         "TAMING_TRANSFORMERS_COMMIT_HASH", "24268930bf1dce879235a7fddd0b2355b84d7ea6"
     )
     k_diffusion_commit_hash = os.environ.get(
-        "K_DIFFUSION_COMMIT_HASH", "f4e99857772fc3a126ba886aadf795a332774878"
+        "K_DIFFUSION_COMMIT_HASH", "44c46f0ed395967cd3830dd481a2db759fda5b3b"
     )
     codeformer_commit_hash = os.environ.get(
         "CODEFORMER_COMMIT_HASH", "c5b4593074ba6214284d6acd5f1719b6c5d739af"
@@ -38,28 +38,42 @@ def download_repos():
     )
 
     # Do the cloning/downloading of repos if not downloaded already
-    git_clone(
-        stable_diffusion_repo,
-        os.path.join(dir_repos, "stable-diffusion"),
-        "Stable Diffusion",
-        stable_diffusion_commit_hash,
-    )
-    git_clone(
-        taming_transformers_repo,
-        os.path.join(dir_repos, "taming-transformers"),
-        "Taming Transformers",
-        taming_transformers_commit_hash,
-    )
-    git_clone(
-        k_diffusion_repo,
-        os.path.join(dir_repos, "k-diffusion"),
-        "K-diffusion",
-        k_diffusion_commit_hash,
-    )
-    git_clone(
-        codeformer_repo,
-        os.path.join(dir_repos, "CodeFormer"),
-        "CodeFormer",
-        codeformer_commit_hash,
-    )
-    git_clone(blip_repo, os.path.join(dir_repos, "BLIP"), "BLIP", blip_commit_hash)
+    if not os.path.exists(f"{dir_repos}/stable-difussion"):
+        print("Downloading stable-diffusion repo...")
+        git_clone(
+            stable_diffusion_repo,
+            os.path.join(dir_repos, "stable-diffusion"),
+            "Stable Diffusion",
+            stable_diffusion_commit_hash,
+        )
+
+    if not os.path.exists(f"{dir_repos}/taming-transformers"):
+        print("Downloading taming-transformers repo...")
+        git_clone(
+            taming_transformers_repo,
+            os.path.join(dir_repos, "taming-transformers"),
+            "Taming Transformers",
+            taming_transformers_commit_hash,
+        )
+
+    if not os.path.exists(f"{dir_repos}/k-diffusion"):
+        print("Downloading k-diffusion repo...")
+        git_clone(
+            k_diffusion_repo,
+            os.path.join(dir_repos, "k-diffusion"),
+            "K-diffusion",
+            k_diffusion_commit_hash,
+        )
+
+    if not os.path.exists(f"{dir_repos}/CodeFormer"):
+        print("Downloading CodeFormer repo...")
+        git_clone(
+            codeformer_repo,
+            os.path.join(dir_repos, "CodeFormer"),
+            "CodeFormer",
+            codeformer_commit_hash,
+        )
+
+    if not os.path.exists(f"{dir_repos}/BLIP"):
+        print("Downloading BLIP repo...")
+        git_clone(blip_repo, os.path.join(dir_repos, "BLIP"), "BLIP", blip_commit_hash)
