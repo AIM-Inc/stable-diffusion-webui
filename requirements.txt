@@ -30,3 +30,5 @@ fastapi==0.85.2
 psutil==5.9.3
 gdown==4.5.3
 black==22.10.0
+torchsde==0.2.5
+PySocks==1.7.1
