@@ -29,3 +29,6 @@ notification.mp3
 .vscode
 .DS_Store
 *.pt
+
+# Extensions
+/extensions/test
