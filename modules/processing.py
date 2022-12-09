@@ -28,7 +28,8 @@ import modules.styles
 import logging
 
 
-# some of those options should not be changed at all because they would break the model, so I removed them from options.
+# some of those options should not be changed at all because they would break the model,
+# so I removed them from options.
 opt_C = 4
 opt_f = 8
 
@@ -86,7 +87,8 @@ def get_correct_sampler(p):
 
 class StableDiffusionProcessing:
     """
-    The first set of paramaters: sd_models -> do_not_reload_embeddings represent the minimum required to create a StableDiffusionProcessing
+    The first set of paramaters: sd_models -> do_not_reload_embeddings represent the minimum
+    required to create a StableDiffusionProcessing
     """
 
     def __init__(
@@ -341,9 +343,9 @@ def create_random_tensors(
     xs = []
 
     # if we have multiple seeds, this means we are working with batch size>1; this then
-    # enables the generation of additional tensors with noise that the sampler will use during its processing.
-    # Using those pre-generated tensors instead of simple torch.randn allows a batch with seeds [100, 101] to
-    # produce the same images as with two batches [100], [101].
+    # enables the generation of additional tensors with noise that the sampler will use during
+    # its processing. Using those pre-generated tensors instead of simple torch.randn allows a
+    # batch with seeds [100, 101] to produce the same images as with two batches [100], [101].
     if (
         p is not None
         and p.sampler is not None
@@ -504,17 +506,15 @@ def create_infotext(
     )
 
 
-def process_images(p: StableDiffusionProcessing) -> Processed:
+def process_images(p: StableDiffusionProcessing, zoom=None) -> Processed:
     stored_opts = {k: opts.data[k] for k in p.override_settings.keys()}
 
     try:
         for k, v in p.override_settings.items():
-            opts.data[
-                k
-            ] = v  # we don't call onchange for simplicity which makes changing model, hypernet impossible
+            # we don't call onchange for simplicity which makes changing model, hypernet impossible
+            opts.data[k] = v
 
-        res = process_images_inner(p)
-
+        res = process_images_inner(p, zoom=zoom)
     finally:
         for k, v in stored_opts.items():
             opts.data[k] = v
@@ -522,8 +522,11 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
     return res
 
 
-def process_images_inner(p: StableDiffusionProcessing) -> Processed:
-    """this is the main loop that both txt2img and img2img use; it calls func_init once inside all the scopes and func_sample once per batch"""
+def process_images_inner(p: StableDiffusionProcessing, zoom=None) -> Processed:
+    """
+    This is the main loop that both txt2img and img2img use; it calls func_init once inside
+    all the scopes and func_sample once per batch
+    """
 
     if type(p.prompt) == list:
         assert len(p.prompt) > 0
@@ -645,7 +648,7 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
             if opts.filter_nsfw:
                 import modules.safety as safety
 
-                x_samples_ddim = modules.safety.censor_batch(x_samples_ddim)
+                x_samples_ddim = safety.censor_batch(x_samples_ddim)
 
             for i, x_sample in enumerate(x_samples_ddim):
                 x_sample = 255.0 * np.moveaxis(x_sample.cpu().numpy(), 0, 2)
@@ -675,6 +678,14 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     devices.torch_gc()
 
                 image = Image.fromarray(x_sample)
+
+                if zoom is not None and zoom > 0:
+                    width, height = image.size
+                    zoom_in_factor = zoom / 100
+                    magnified_image = image.resize(
+                        (int(width * zoom_in_factor), int(height * zoom_in_factor))
+                    )
+                    image = magnified_image
 
                 if p.color_corrections is not None and i < len(p.color_corrections):
                     if (
@@ -713,9 +724,12 @@ def process_images_inner(p: StableDiffusionProcessing) -> Processed:
                     )
 
                 text = infotext(n, i)
+
                 infotexts.append(text)
+
                 if opts.enable_pnginfo:
                     image.info["parameters"] = text
+
                 output_images.append(image)
 
             del x_samples_ddim
