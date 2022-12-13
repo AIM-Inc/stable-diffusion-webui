@@ -27,6 +27,8 @@ import modules.images as images
 import modules.styles
 import logging
 
+from modules.zoom.zoom import img_zoom_center
+
 
 # some of those options should not be changed at all because they would break the model,
 # so I removed them from options.
@@ -680,12 +682,7 @@ def process_images_inner(p: StableDiffusionProcessing, zoom=None) -> Processed:
                 image = Image.fromarray(x_sample)
 
                 if zoom is not None and zoom > 0:
-                    width, height = image.size
-                    zoom_in_factor = zoom / 100
-                    magnified_image = image.resize(
-                        (int(width * zoom_in_factor), int(height * zoom_in_factor))
-                    )
-                    image = magnified_image
+                    image = img_zoom_center(image, zoom)
 
                 if p.color_corrections is not None and i < len(p.color_corrections):
                     if (
