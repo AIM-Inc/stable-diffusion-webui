@@ -329,7 +329,7 @@
     "customscript/depth2image_depthmask.py/img2img/Turn the depthmap into absolute black/white/value": false,
     "customscript/loopback_zoom.py/img2img/Loops/value": 4,
     "customscript/loopback_zoom.py/img2img/Loops/minimum": 1,
-    "customscript/loopback_zoom.py/img2img/Loops/maximum": 10000,
+    "customscript/loopback_zoom.py/img2img/Loops/maximum": 100000,
     "customscript/loopback_zoom.py/img2img/Loops/step": 1,
     "customscript/loopback_zoom.py/img2img/Zoom/value": 0,
     "customscript/loopback_zoom.py/img2img/Zoom/minimum": -100.0,
