@@ -27,3 +27,8 @@ notification.mp3
 /SwinIR
 /textual_inversion
 .vscode
+.DS_Store
+*.pt
+
+# Extensions
+/extensions/test

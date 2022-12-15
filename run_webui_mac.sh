@@ -14,4 +14,3 @@ python webui.py --precision full --no-half --use-cpu Interrogate GFPGAN CodeForm
 
 # Deactivate conda environment
 conda deactivate
-
