@@ -1,10 +1,24 @@
-# Stable Diffusion web UI
+# AIMC Stable Diffusion Web UI
+
+## Overview
 
 A browser interface based on Gradio library for Stable Diffusion.
 
 ![](txt2img_Screenshot.png)
 
 Check the [custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts) wiki page for extra scripts developed by users.
+
+## Table of Contents
+
+<!-- vim-markdown-toc GFM -->
+
+- [AIMC Stable Diffusion Web UI](#aimc-stable-diffusion-web-ui)
+    - [Overview](#overview)
+    - [Table of Contents](#table-of-contents)
+    - [AIMC Installation](#aimc-installation)
+    - [Config](#config)
+
+<!-- vim-markdown-toc -->
 
 ## AIMC Installation
 
@@ -83,6 +97,18 @@ conda activate web-ui
 
 - Verify you have access to run the `run_webui_mac.sh` script by running `chmod +x run_webui_mac.sh` in your terminal
 - Run `./run_webui_mac.sh`
+
+## Config
+
+The `ui-config.json` is used to configure all of the settings for the ui including the limits of the components/elements (min/max values). If this file is not present the limits are hard coded to a default value that is in the python code and written to the `ui-config.json` file at the root of the project.
+Configuration files like `ui-config.json` are not included in the repository, and are excluded using the [.gitignore](.gitignore) file. 
+
+Updates to the defaults in the python code should be done instead to add greater limits that we can then temper with the `ui-config.json`.
+
+Hard coded default values have been changed in the following components according to the needs of AIMC:
+
+- [scripts/loopback.py](scripts/loopback.py)  
+  - [loopback slider](https://github.com/AIM-Inc/stable-diffusion-webui/blob/e4e9f83f3754443a21facc2bf8e56a9aba420eaa/scripts/loopback.py#L20) max value is now set to `100000`
 
 ## Features
 
