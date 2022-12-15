@@ -6,7 +6,9 @@ import os
 import sys
 import traceback
 import inspect
-
+import json
+import shutil
+from modules.paths import script_path
 import modules.textual_inversion.dataset
 import torch
 import tqdm
@@ -126,7 +128,7 @@ class Hypernetwork:
     filename = None
     name = None
 
-    def __init__(self, name=None, enable_sizes=None, layer_structure=None, activation_func=None, weight_init=None, add_layer_norm=False, use_dropout=False):
+    def __init__(self, name=None, enable_sizes=None, layer_structure=None, activation_func=None, weight_init=None, add_layer_norm=False, use_dropout=False, dir_path='/home/knowlabs/stable-diffusion-webui-3/modules/textual_inversion/embeddings_config.json'):
         self.filename = None
         self.name = name
         self.layers = {}
@@ -138,6 +140,15 @@ class Hypernetwork:
         self.weight_init = weight_init
         self.add_layer_norm = add_layer_norm
         self.use_dropout = use_dropout
+        try:
+            dir_config_file = open(dir_path)
+            instance_config = json.load(dir_config_file)
+            self.logging_dirs = [hypernets["hypernetworks"]["logging"] for hypernets in instance_config]
+            self.model_dirs = [hypernets["hypernetworks"]["model"] for hypernets in instance_config]
+        except Exception as e:
+            print(e)
+            self.logging_dirs = None
+            self.model_dirs = None
 
         for size in enable_sizes or []:
             self.layers[size] = (
@@ -172,6 +183,31 @@ class Hypernetwork:
         state_dict['sd_checkpoint_name'] = self.sd_checkpoint_name
 
         torch.save(state_dict, filename)
+        return filename
+
+    def share(self):
+        if self.model_dirs:
+            try:
+                dirs_saved_to = [self.save(os.path.join(model_dir, f'{self.name}.pt')) for model_dir in self.model_dirs]
+                print(f"Saved embedding to shared locations: {dirs_saved_to}")
+            except Exception:
+                print(
+                    f"Error saving embedding:",
+                    file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
+
+    def share_logging(self):
+        if self.logging_dirs:
+            try:
+                rel_dir = os.path.join(datetime.datetime.now().strftime("%Y-%m-%d"), self.name)
+                source_dir = os.path.join(script_path, "textual_inversion", rel_dir)
+                dirs_saved_to = [shutil.copytree(source_dir, os.path.join(destination_dir, rel_dir), dirs_exist_ok=True) for destination_dir in self.logging_dirs]
+                print(f"Saved hypernetwork to shared locations: {dirs_saved_to}")
+            except Exception:
+                print(
+                    f"Error saving hypernetwork to shared location:",
+                    file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
 
     def load(self, filename):
         self.filename = filename
@@ -344,7 +380,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
     log_directory = os.path.join(log_directory, datetime.datetime.now().strftime("%Y-%m-%d"), hypernetwork_name)
     unload = shared.opts.unload_models_when_training
-
+    # Hook here
     if save_hypernetwork_every > 0:
         hypernetwork_dir = os.path.join(log_directory, "hypernetworks")
         os.makedirs(hypernetwork_dir, exist_ok=True)
@@ -396,7 +432,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
         if len(loss_dict) > 0:
             previous_mean_losses = [i[-1] for i in loss_dict.values()]
             previous_mean_loss = mean(previous_mean_losses)
-            
+
         scheduler.apply(optimizer, hypernetwork.step)
         if scheduler.finished:
             break
@@ -415,7 +451,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
             losses[hypernetwork.step % losses.shape[0]] = loss.item()
             for entry in entries:
                 loss_dict[entry.filename].append(loss.item())
-                
+
             optimizer.zero_grad()
             weights[0].grad = None
             loss.backward()
@@ -430,7 +466,7 @@ def train_hypernetwork(hypernetwork_name, learn_rate, batch_size, data_root, log
 
         if torch.isnan(losses[hypernetwork.step % losses.shape[0]]):
             raise RuntimeError("Loss diverged.")
-        
+
         if len(previous_mean_losses) > 1:
             std = stdev(previous_mean_losses)
         else:
@@ -501,7 +537,7 @@ Last saved hypernetwork: {html.escape(last_saved_file)}<br/>
 Last saved image: {html.escape(last_saved_image)}<br/>
 </p>
 """
-        
+
     report_statistics(loss_dict)
     checkpoint = sd_models.select_checkpoint()
 

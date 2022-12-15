@@ -27,7 +27,7 @@ def load_models(model_path: str, model_url: str = None, command_path: str = None
         ext_filter = []
 
     try:
-        places = []
+        places = ["/var/data/stable-diffusion/models"]
 
         if command_path is not None and command_path != model_path:
             pretrained_path = os.path.join(command_path, 'experiments/pretrained_models')

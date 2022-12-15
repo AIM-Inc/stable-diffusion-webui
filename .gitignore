@@ -30,5 +30,7 @@ notification.mp3
 .DS_Store
 *.pt
 
+.DS_Store
+
 # Extensions
 /extensions/test

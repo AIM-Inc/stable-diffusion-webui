@@ -7,8 +7,10 @@ import tqdm
 import html
 import datetime
 import csv
-import json
 
+import json
+import shutil
+from modules.paths import script_path
 from PIL import Image, PngImagePlugin
 
 from modules import shared, devices, sd_hijack, processing, sd_models, images
@@ -21,11 +23,16 @@ from modules.textual_inversion.image_embedding import (embedding_to_b64, embeddi
 
 
 class Embedding:
-    def __init__(self, vec, name, step=None, dir_path="embeddings_config.json"):
+    def __init__(self, vec, name, step=None, dir_path='/home/knowlabs/stable-diffusion-webui-3/modules/textual_inversion/embeddings_config.json'):
         try:
-            self.dirs = json.load(dir_path)
-        except Exception:
+            dir_config_file = open(dir_path)
+            instance_config = json.load(dir_config_file)
+            self.dirs = [embeddings["embeddings"] for embeddings in instance_config]
+            self.logging_dirs = [hypernets["hypernetworks"]["logging"] for hypernets in instance_config]
+        except Exception as e:
+            print(f"Error setting the shared embedding directories:\n{e}")
             self.dirs = None
+            self.logging_dirs = None
         self.vec = vec
         self.name = name
         self.step = step
@@ -44,24 +51,31 @@ class Embedding:
         }
 
         torch.save(embedding_data, filename)
+        return filename
 
     # Share the model to various locations on disk. Config directory defaults to
     # /svr/stable-diffusion-webui-shared/embeddings-config.json
-    # [
-    #    {"name": "service 1", "path": "/knowlabs/stable-diffusion-webui-1/embeddings"},
-    #    {"name": "service 2", "path": "/knowlabs/stable-diffusion-webui-2/embeddings"},
-    #    {"name": "service 3", "path": "/knowlabs/stable-diffusion-webui-3/embeddings"},
-    #    {"name": "service 4", "path": "/knowlabs/stable-diffusion-webui-4/embeddings"}
-    # ]
     def share(self):
         if self.dirs:
             try:
-                dirs_saved_to = [self.save(embedding["path"])
-                                 for embedding in self.dirs]
+                dirs_saved_to = [self.save(os.path.join(embedding_dir, f'{self.name}.pt')) for embedding_dir in self.dirs]
                 print(f"Saved embedding to shared locations: {dirs_saved_to}")
             except Exception:
                 print(
-                    f"Error loading emedding dir config{self.dirs}:",
+                    f"Error saving embedding:",
+                    file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
+
+    def share_logging(self):
+        if self.logging_dirs:
+            try:
+                rel_dir = os.path.join(datetime.datetime.now().strftime("%Y-%m-%d"), self.name)
+                source_dir = os.path.join(script_path, "textual_inversion", rel_dir)
+                dirs_saved_to = [shutil.copytree(source_dir, os.path.join(destination_dir, rel_dir), dirs_exist_ok=True) for destination_dir in self.logging_dirs]
+                print(f"Saved hypernetwork to shared locations: {dirs_saved_to}")
+            except Exception:
+                print(
+                    f"Error saving hypernetwork to shared location:",
                     file=sys.stderr)
                 print(traceback.format_exc(), file=sys.stderr)
 
@@ -213,7 +227,6 @@ def create_embedding(name, num_vectors_per_token, overwrite_old, init_text='*'):
 
     embedding = Embedding(vec, name)
     embedding.step = 0
-    embedding.save(fn)
     embedding.share()
 
     return fn
@@ -434,7 +447,6 @@ Last saved image: {html.escape(last_saved_image)}<br/>
     embedding.name = embedding_name
     filename = os.path.join(
         shared.cmd_opts.embeddings_dir, f'{embedding.name}.pt')
-    embedding.save(filename)
-    #
+    embedding.share()
 
     return embedding, filename

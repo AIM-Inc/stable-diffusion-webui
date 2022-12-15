@@ -1,0 +1,65 @@
+[
+	{
+		"name": "service 1",
+		"project": "/home/knowlabs/stable-diffusion-webui-1",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-1/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-1/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-1/textual_inversion"
+		}
+	},
+	{
+		"name": "service 2",
+		"project": "/home/knowlabs/stable-diffusion-webui-2",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-2/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-2/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-2/textual_inversion"
+		}
+	},
+	{
+		"name": "service 3",
+		"project": "/home/knowlabs/stable-diffusion-webui-3",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-3/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-3/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-3/textual_inversion"
+		}
+	},
+	{
+		"name": "service 4",
+		"project": "/home/knowlabs/stable-diffusion-webui-4",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-4/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-4/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-4/textual_inversion"
+		}
+	},
+	{
+		"name": "service 5",
+		"project": "/home/knowlabs/stable-diffusion-webui-5",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-5/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-5/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-5/textual_inversion"
+		}
+	},
+	{
+		"name": "service 6",
+		"project": "/home/knowlabs/stable-diffusion-webui-6",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-6/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-6/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-6/textual_inversion"
+		}
+	},
+	{
+		"name": "service 7",
+		"project": "/home/knowlabs/stable-diffusion-webui-7",
+		"embeddings": "/home/knowlabs/stable-diffusion-webui-7/embeddings",
+		"hypernetworks": {
+			"model": "/home/knowlabs/stable-diffusion-webui-7/models/hypernetworks",
+			"logging": "/home/knowlabs/stable-diffusion-webui-7/textual_inversion"
+		}
+	}
+]
