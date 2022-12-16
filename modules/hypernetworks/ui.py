@@ -30,7 +30,7 @@ def create_hypernetwork(name, enable_sizes, overwrite_old, layer_structure=None,
         add_layer_norm=add_layer_norm,
         use_dropout=use_dropout,
     )
-    hypernet.save(fn)
+    hypernet.share()
 
     shared.reload_hypernetworks()
 
@@ -60,4 +60,4 @@ Hypernetwork saved to {html.escape(filename)}
         shared.sd_model.cond_stage_model.to(devices.device)
         shared.sd_model.first_stage_model.to(devices.device)
         sd_hijack.apply_optimizations()
-
+        hypernetwork.share_logging()

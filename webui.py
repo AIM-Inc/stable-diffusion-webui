@@ -151,8 +151,8 @@ def api_only():
 def webui():
     launch_api = cmd_opts.api
 
-    download_repos()
-    download_extensions()
+    #download_repos()
+    #download_extensions()
     initialize()
 
     while 1:

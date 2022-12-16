@@ -6,7 +6,6 @@ import modules.textual_inversion.textual_inversion
 import modules.textual_inversion.preprocess
 from modules import sd_hijack, shared
 
-
 def create_embedding(name, initialization_text, nvpt, overwrite_old):
     filename = modules.textual_inversion.textual_inversion.create_embedding(name, nvpt, overwrite_old, init_text=initialization_text)
 
@@ -39,4 +38,5 @@ Embedding saved to {html.escape(filename)}
         raise
     finally:
         sd_hijack.apply_optimizations()
+        embedding.share_logging()
 
